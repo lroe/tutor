@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { extractPdf } from "./pdf";
-import type { Book, Chapter, LearnerProfile, Lesson } from "./types";
+import type { Book, Chapter, Lesson } from "./types";
 import { uid } from "./util";
 
 export async function addBook(
@@ -67,7 +67,6 @@ export async function latestLessonForChapter(
 export async function openLesson(
   book: Book,
   chapter: Chapter,
-  learner?: LearnerProfile,
 ): Promise<Lesson> {
   const existing = await latestLessonForChapter(book.id, chapter.id);
   const now = Date.now();
@@ -85,7 +84,6 @@ export async function openLesson(
     plan: [],
     currentIndex: 0,
     status: "planning",
-    learner,
     createdAt: now,
     updatedAt: now,
   };

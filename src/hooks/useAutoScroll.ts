@@ -1,30 +1,55 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, type RefCallback } from "react";
 
 export function useAutoScroll<T extends HTMLElement>(trigger: unknown) {
-  const containerRef = useRef<T | null>(null);
+  const elementRef = useRef<T | null>(null);
+  const observerRef = useRef<ResizeObserver | null>(null);
   const stickRef = useRef(true);
 
-  useEffect(() => {
-    const element = containerRef.current;
-    if (!element) return;
-    const scrollIfSticking = () => {
-      if (stickRef.current) element.scrollTop = element.scrollHeight;
-    };
-    const observer = new ResizeObserver(scrollIfSticking);
-    observer.observe(element);
-    const child = element.firstElementChild;
-    if (child) observer.observe(child);
-    return () => observer.disconnect();
+  const scrollIfSticking = useCallback(() => {
+    const element = elementRef.current;
+    if (element && stickRef.current) {
+      element.scrollTop = element.scrollHeight;
+    }
   }, []);
 
+  const containerRef = useCallback<RefCallback<T>>(
+    (node) => {
+      elementRef.current = node;
+      observerRef.current?.disconnect();
+      observerRef.current = null;
+      if (!node) return;
+
+      const observer = new ResizeObserver(scrollIfSticking);
+      observer.observe(node);
+      const child = node.firstElementChild;
+      if (child) observer.observe(child);
+      observerRef.current = observer;
+
+      if (stickRef.current) {
+        node.scrollTop = node.scrollHeight;
+      }
+    },
+    [scrollIfSticking],
+  );
+
   useEffect(() => {
-    const element = containerRef.current;
-    if (!element || !stickRef.current) return;
-    element.scrollTop = element.scrollHeight;
+    const element = elementRef.current;
+    if (!element) return;
+    if (stickRef.current) {
+      element.scrollTop = element.scrollHeight;
+    }
   }, [trigger]);
 
+  useEffect(
+    () => () => {
+      observerRef.current?.disconnect();
+      observerRef.current = null;
+    },
+    [],
+  );
+
   const onScroll = useCallback(() => {
-    const element = containerRef.current;
+    const element = elementRef.current;
     if (!element) return;
     const distance =
       element.scrollHeight - element.scrollTop - element.clientHeight;
@@ -33,7 +58,7 @@ export function useAutoScroll<T extends HTMLElement>(trigger: unknown) {
 
   const jumpToEnd = useCallback(() => {
     stickRef.current = true;
-    const element = containerRef.current;
+    const element = elementRef.current;
     if (element) element.scrollTop = element.scrollHeight;
   }, []);
 

@@ -13,11 +13,8 @@ import type { Settings } from "../lib/types";
 const STORAGE_KEY = "cove.settings.v1";
 
 const DEFAULT_SETTINGS: Settings = {
-  name: "",
   apiKey: "",
   model: DEFAULT_MODEL,
-  demo: true,
-  onboarded: false,
 };
 
 function loadSettings(): Settings {
@@ -26,16 +23,11 @@ function loadSettings(): Settings {
     if (!raw) return DEFAULT_SETTINGS;
     const parsed = JSON.parse(raw) as Partial<Settings>;
     return {
-      ...DEFAULT_SETTINGS,
-      ...parsed,
-      name: typeof parsed.name === "string" ? parsed.name.slice(0, 60) : "",
       apiKey: typeof parsed.apiKey === "string" ? parsed.apiKey.trim() : "",
       model:
         typeof parsed.model === "string" && parsed.model.trim()
           ? parsed.model.trim()
           : DEFAULT_MODEL,
-      demo: parsed.demo !== false,
-      onboarded: parsed.onboarded === true,
     };
   } catch {
     return DEFAULT_SETTINGS;
@@ -45,7 +37,6 @@ function loadSettings(): Settings {
 interface SettingsContextValue {
   settings: Settings;
   update: (patch: Partial<Settings>) => void;
-  reset: () => void;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -57,7 +48,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     } catch {
-      // Storage can be full or blocked; the app still works for this session.
+      // The app still works for this session if storage is blocked or full.
     }
   }, [settings]);
 
@@ -65,14 +56,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings((current) => ({ ...current, ...patch }));
   }, []);
 
-  const reset = useCallback(() => {
-    setSettings({ ...DEFAULT_SETTINGS });
-  }, []);
-
-  const value = useMemo(
-    () => ({ settings, update, reset }),
-    [settings, update, reset],
-  );
+  const value = useMemo(() => ({ settings, update }), [settings, update]);
   return (
     <SettingsContext.Provider value={value}>
       {children}

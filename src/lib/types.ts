@@ -71,16 +71,6 @@ export interface VisualSelection {
 export type Mastery = "passed" | "shaky" | "skipped";
 export type Verdict = "correct" | "partial" | "incorrect" | "question";
 export type ConceptKind = "recall" | "concept" | "apply";
-export type LearnerLevel = "new" | "some" | "confident";
-export type LearnerTime = "short" | "medium" | "open";
-export type LearnerGoal = "understand" | "exam" | "clinical";
-
-export interface LearnerProfile {
-  level: LearnerLevel;
-  time: LearnerTime;
-  goal: LearnerGoal;
-}
-
 export interface ConceptCheck {
   question: string;
   messageId: number;
@@ -117,7 +107,6 @@ export interface Lesson {
   plan: Concept[];
   currentIndex: number;
   status: "planning" | "active" | "done" | "error";
-  learner?: LearnerProfile;
   createdAt: number;
   updatedAt: number;
 }
@@ -144,11 +133,8 @@ export interface Activity {
 }
 
 export interface Settings {
-  name: string;
   apiKey: string;
   model: string;
-  demo: boolean;
-  onboarded: boolean;
 }
 
 export interface PlanItem {

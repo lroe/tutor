@@ -1,4 +1,4 @@
-import { readPageImage, isDemoMode } from "./ai";
+import { readPageImage } from "./ai";
 import { db, pagesFor } from "./db";
 import { renderPageImage, withPdf } from "./pdf";
 import type { Book, Settings } from "./types";
@@ -21,10 +21,8 @@ export async function readScannedPages(args: {
   signal?: AbortSignal;
 }): Promise<number> {
   const { book, startPage, endPage, settings, onProgress, signal } = args;
-  if (isDemoMode(settings)) {
-    throw new AIError(
-      "Reading scanned pages needs a Gemini key. Add one in Settings, then try again.",
-    );
+  if (!settings.apiKey.trim()) {
+    throw new AIError("Add your Gemini API key in Settings first.");
   }
   const pages = await pagesFor(book.id, startPage, endPage);
   const blank = pages

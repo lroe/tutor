@@ -22,7 +22,7 @@ export function ToothMark({
 }
 
 export function Wordmark({
-  size = 24,
+  size = 19,
   className,
 }: {
   size?: number;
@@ -30,10 +30,8 @@ export function Wordmark({
 }) {
   return (
     <span className={cx("wordmark", className)} aria-label="Cove">
-      <span className="wordmark-mark" aria-hidden="true">
-        <ToothMark size={size} />
-      </span>
-      <span className="wordmark-text">cove</span>
+      <ToothMark size={size} />
+      <span className="wordmark-text">Cove</span>
     </span>
   );
 }
@@ -48,7 +46,7 @@ export function TypingDots() {
   );
 }
 
-export function Spinner({ size = 18 }: { size?: number }) {
+export function Spinner({ size = 20 }: { size?: number }) {
   return (
     <span
       className="spinner"

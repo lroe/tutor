@@ -1,4 +1,4 @@
-import { findFigures, isDemoMode } from "./ai";
+import { findFigures } from "./ai";
 import { db } from "./db";
 import { renderPageImage, withPdf } from "./pdf";
 import type { Figure, PageImage, Settings } from "./types";
@@ -124,7 +124,8 @@ export async function ensureFigures(
   bookId: string,
   pageNo: number,
   settings: Settings,
-): Promise<Figure[]> {  if (isDemoMode(settings)) return [];
+): Promise<Figure[]> {
+  if (!settings.apiKey.trim()) return [];
   const id = `${bookId}:${pageNo}`;
   const page = await db.pageImages.get(id);
   if (!page) return [];

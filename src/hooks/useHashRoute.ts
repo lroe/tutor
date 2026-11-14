@@ -1,37 +1,23 @@
 import { useCallback, useEffect, useState } from "react";
 
 export type Route =
-  | { name: "library" }
-  | { name: "book"; id: string }
-  | { name: "lesson"; id: string; reteach?: number }
-  | { name: "progress" }
-  | { name: "settings" };
+  | { name: "home" }
+  | { name: "lesson"; id: string };
 
 export function parseRoute(hash: string): Route {
   const clean = hash.replace(/^#\/?/, "");
-  const [path, queryString] = clean.split("?");
+  const [path] = clean.split("?");
   const segments = path.split("/").filter(Boolean);
-  const query = new URLSearchParams(queryString ?? "");
-  const first = segments[0];
-
-  if (first === "book" && segments[1]) {
-    return { name: "book", id: decodeURIComponent(segments[1]) };
+  if (segments[0] === "lesson" && segments[1]) {
+    return { name: "lesson", id: decodeURIComponent(segments[1]) };
   }
-  if (first === "lesson" && segments[1]) {
-    const reteachRaw = query.get("reteach");
-    const reteach =
-      reteachRaw !== null && Number.isFinite(Number(reteachRaw))
-        ? Math.max(0, Math.floor(Number(reteachRaw)))
-        : undefined;
-    return { name: "lesson", id: decodeURIComponent(segments[1]), reteach };
-  }
-  if (first === "progress") return { name: "progress" };
-  if (first === "settings") return { name: "settings" };
-  return { name: "library" };
+  return { name: "home" };
 }
 
 export function useHashRoute() {
-  const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash));
+  const [route, setRoute] = useState<Route>(() =>
+    parseRoute(window.location.hash),
+  );
 
   useEffect(() => {
     const onChange = () => setRoute(parseRoute(window.location.hash));

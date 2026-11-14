@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "A quiet place to learn. A local-first, guided textbook tutor.",
+  "description": "A quiet tutor for your notes.",
   "engines": {
     "node": ">=20.19"
   },
@@ -14,7 +14,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@fontsource-variable/fraunces": "^5.2.9",
     "@fontsource-variable/inter": "^5.2.8",
     "dexie": "^4.2.0",
     "dexie-react-hooks": "^1.1.7",
