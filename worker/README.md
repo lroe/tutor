@@ -107,7 +107,8 @@ npx wrangler@latest secret put OPENCODE_API_KEY --config wrangler.iphone.toml
 
 `wrangler.iphone.toml` names the Worker `cove-proxy-iphone`. After the Pages
 project exists, set `ALLOWED_ORIGIN` in that file to the Pages origin, then
-redeploy:
+redeploy. Without `ALLOWED_ORIGIN` in the config, Wrangler deletes variables
+managed in the dashboard; add `--keep-vars` if you prefer to edit them there.
 
 ```toml
 [vars]

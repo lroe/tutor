@@ -1,12 +1,16 @@
 const UPSTREAM =
   "https://opencode.ai/inference/go/openai/v1/chat/completions";
 
+function normalizeOrigin(value) {
+  return value.trim().replace(/\/+$/, "");
+}
+
 function corsHeaders(env, request) {
   const configured = (env.ALLOWED_ORIGIN || "")
     .split(",")
-    .map((value) => value.trim())
+    .map(normalizeOrigin)
     .filter(Boolean);
-  const origin = request.headers.get("Origin") || "";
+  const origin = normalizeOrigin(request.headers.get("Origin") || "");
 
   let allow = "*";
   if (configured.length && !configured.includes("*")) {
