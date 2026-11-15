@@ -788,7 +788,7 @@ function MessageRow({
         <Markdown>{before}</Markdown>
         <InlineFigure
           bookId={bookId}
-          pageNumbers={concept.pages}
+          pageNumbers={pageFilter ? [pageFilter] : concept.pages}
           pageFilter={pageFilter}
           settings={settings}
           onOpen={onOpenImage}

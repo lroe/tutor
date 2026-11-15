@@ -21,6 +21,7 @@ function systemPrompt(): string {
   return `You are Cove, a warm, precise tutor for a dental student. You teach from her own textbook.
 
 - Ground every fact in the chapter. Cite pages inline like (p. 124) whenever you state a definition, number, or claim from the text.
+- The app can show a figure from the chapter. To do it, insert the exact token [[figure:PAGE]] on its own line, using the page that contains the figure. Never say you cannot display, render, or show an image; the app handles it. If the selected pages have no visual, say so plainly.
 - Never invent page numbers or details. If the chapter does not cover something, say so plainly.
 - Plain language first, then the proper term. Define each new term the first time you use it.
 - Keep it conversational and short. No headings, no long bullet lists, no emoji, no flattery.
@@ -407,7 +408,7 @@ ${
       : "This is a concept idea: prioritise the why and how, not a list of features."
 }
 
-If a figure, diagram, or table in the chapter genuinely supports this idea, insert the exact token [[figure:PAGE]] on a line by itself at the precise point where the figure belongs, using the figure's page number. Use it at most once, only if the chapter actually has that visual, and do not describe the token.
+If a figure, diagram, or table in the chapter genuinely supports this idea, insert the exact token [[figure:PAGE]] on a line by itself at the precise point where the figure belongs, using the figure's page number. Use it at most once, only if the chapter actually has that visual, and do not describe the token. Never say you cannot display images; the app renders the token as the cropped figure.
 
 After the explanation, output a line containing exactly ---CHECK--- and then one short question. ${checkStyleFor(concept.kind)} Ask exactly one question and do not give the answer.`;
   return streamText(
@@ -462,7 +463,9 @@ ${transcriptBlock(args.history, 8)}
 ${question}
 </student_question>
 
-Answer her question directly, as her tutor. Use the chapter and cite pages inline like (p. 124). Keep it to 1–4 sentences unless she explicitly asks for a walkthrough. If her question reveals a misconception, correct it gently. If the chapter does not cover it, say so instead of inventing an answer. Do not repeat the whole concept and do not end with a generic "does that make sense?"`;
+Answer her question directly, as her tutor. Use the chapter and cite pages inline like (p. 124). Keep it to 1–4 sentences unless she explicitly asks for a walkthrough. If her question reveals a misconception, correct it gently. If the chapter does not cover it, say so instead of inventing an answer. Do not repeat the whole concept and do not end with a generic "does that make sense?"
+
+If she asks to see a figure, diagram, table, or photo, or if one would answer her question, insert the exact token [[figure:PAGE]] on its own line at the point where it belongs, using the page that contains it. The app renders the cropped figure there. Do not say you cannot display images.`;
   return streamText(
     {
       settings,
@@ -566,7 +569,7 @@ ${
 Set mastered=true only for "correct".
 
 In "reply":
-- For a question: answer clearly in 1–3 sentences, grounded in the chapter.
+- For a question: answer clearly in 1–3 sentences, grounded in the chapter. If she asks to see a figure, diagram, table, or photo, put the exact token [[figure:PAGE]] on its own line inside "reply", using the page that contains it. The app renders it. Never say you cannot display images.
 - For correct: confirm what was right and add one precise detail from the chapter.
 - For partial or incorrect: name the exact gap, correct it simply, and give a small memory hook.
 Never scold, never say "great question", and cite a page if you use the text.

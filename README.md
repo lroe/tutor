@@ -138,9 +138,9 @@ Gemini. There is no model picker.
 - The teaching prompt places a figure token at the exact point where the visual
   belongs. Cove renders the cropped diagram inline there, between the paragraphs.
 - Cove shows only real cropped figures. It never substitutes a full page for a
-  diagram, so a text-only page cannot appear as a picture. If the model doesn't
-  place a token, a detected figure is shown between the explanation and the
-  check.
+  diagram, so a text-only page cannot appear as a picture.
+- You can ask **"show that figure"** in chat. Cove inserts the figure token and
+  renders the crop inline. It never claims it cannot display images.
 - Tap the diagram to view it full screen.
 - Scanned/image-only pages are OCR'd automatically when you build a lesson.
 - Selected page text and page images go to the model. The PDF itself stays on
