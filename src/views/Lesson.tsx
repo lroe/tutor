@@ -144,6 +144,10 @@ export function Lesson({
   const [modeOpen, setModeOpen] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+  const pendingScrollRef = useRef<{
+    teachId: number;
+    noteId?: number;
+  } | null>(null);
   const planStartedRef = useRef<string | null>(null);
   const teachStartedRef = useRef<string | null>(null);
   const advancingRef = useRef(false);
@@ -207,12 +211,28 @@ export function Lesson({
   const scrollTrigger = `${messages.length}:${live?.text.length ?? 0}:${
     busy ?? ""
   }:${activeCheck?.question ?? ""}:${isDone ? "done" : ""}`;
-  const { containerRef, onScroll, jumpToEnd } =
+  const { containerRef, onScroll, jumpToEnd, scrollToMessage } =
     useAutoScroll<HTMLDivElement>(scrollTrigger);
 
   useEffect(() => {
     if (messages.length) jumpToEnd();
   }, [messages.length, jumpToEnd]);
+
+  useEffect(() => {
+    const pending = pendingScrollRef.current;
+    if (!pending) return;
+    if (!document.querySelector(`[data-message-id="${pending.teachId}"]`)) {
+      return;
+    }
+    if (
+      pending.noteId !== undefined &&
+      !document.querySelector(`[data-message-id="${pending.noteId}"]`)
+    ) {
+      return;
+    }
+    pendingScrollRef.current = null;
+    scrollToMessage(pending.teachId);
+  }, [messages, busy, scrollToMessage]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -392,8 +412,9 @@ export function Lesson({
           createdAt: Date.now(),
         });
         let checkMessageId = messageId;
+        let noteId: number | undefined;
         if (hasTextbook) {
-          checkMessageId = await db.messages.add({
+          noteId = await db.messages.add({
             lessonId: lesson.id,
             role: "tutor",
             kind: "note",
@@ -402,7 +423,9 @@ export function Lesson({
             checkQuestion: check,
             createdAt: Date.now() + 1,
           });
+          checkMessageId = noteId;
         }
+        pendingScrollRef.current = { teachId: messageId, noteId };
         const latest = await db.lessons.get(lesson.id);
         if (latest) {
           const nextPlan = latest.plan.map((item, itemIndex) =>
@@ -994,7 +1017,7 @@ function MessageRow({
       .replace(FIGURE_TOKEN_ALL, "");
     const pageFilter = Number(figureMatch[1]);
     return (
-      <div className="assistant">
+      <div className="assistant" data-message-id={message.id}>
         <Markdown>{before}</Markdown>
         <InlineFigure
           bookId={bookId}
@@ -1011,7 +1034,7 @@ function MessageRow({
   }
 
   return (
-    <div className="assistant">
+    <div className="assistant" data-message-id={message.id}>
       <Markdown>{body}</Markdown>
       {useFallback && fallbackPage && concept && (
         <InlineFigure

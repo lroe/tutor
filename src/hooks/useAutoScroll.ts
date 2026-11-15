@@ -62,5 +62,20 @@ export function useAutoScroll<T extends HTMLElement>(trigger: unknown) {
     if (element) element.scrollTop = element.scrollHeight;
   }, []);
 
-  return { containerRef, onScroll, jumpToEnd };
+  const scrollToMessage = useCallback((id: number, offset = 8) => {
+    const element = elementRef.current;
+    if (!element) return;
+    const target = element.querySelector<HTMLElement>(
+      `[data-message-id="${id}"]`,
+    );
+    if (!target) return;
+    stickRef.current = false;
+    const top =
+      target.getBoundingClientRect().top -
+      element.getBoundingClientRect().top +
+      element.scrollTop;
+    element.scrollTop = Math.max(0, top - offset);
+  }, []);
+
+  return { containerRef, onScroll, jumpToEnd, scrollToMessage };
 }

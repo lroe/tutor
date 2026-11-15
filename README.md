@@ -95,8 +95,9 @@ Three sample notes are in `sample/`:
 1. **Upload a note** with the bar at the bottom. PDF and `.pptx` both work.
 2. **Pick pages or slides** — From / To — and tap **Build lesson**.
 3. Read the teaching. Type an answer or any question in the message box.
-4. Tap **Next** when you're ready for the next idea. On the last idea it says
-   **Finish**.
+4. Tap **Next** when you're ready for the next idea. Cove scrolls to the start
+   of the new explanation, so you read from the ELI5 message first. On the last
+   idea it says **Finish**.
 5. You land on the note's **Progress** page.
 
 ### Titles
