@@ -1,20 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
-import { ensureFigures, figuresForPages, loadPageImages, visualPages } from "../lib/visuals";
+import {
+  ensureFigures,
+  figuresForPages,
+  loadPageImages,
+  visualPages,
+} from "../lib/visuals";
 import { isConfigured } from "../lib/provider";
-import type { Figure, PageImage, Settings } from "../lib/types";
+import type { Figure, Settings } from "../lib/types";
 
 export function InlineFigure({
   bookId,
   pageNumbers,
   pageFilter,
-  pageFallback = true,
   settings,
   onOpen,
 }: {
   bookId: string;
   pageNumbers: number[];
   pageFilter?: number;
-  pageFallback?: boolean;
   settings: Settings;
   onOpen: (src: string) => void;
 }) {
@@ -24,20 +27,18 @@ export function InlineFigure({
     [pageNumbers.join(",")],
   );
   const pageKey = pages.join(",");
-  const [images, setImages] = useState<PageImage[]>([]);
   const [figures, setFigures] = useState<Figure[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    setImages([]);
     setFigures([]);
     setLoading(true);
 
     (async () => {
       const loaded = await loadPageImages(bookId, pages);
       if (cancelled) return;
-      setImages(loaded);
+
       const cached = await figuresForPages(bookId, pages);
       if (cancelled) return;
       setFigures(cached);
@@ -62,7 +63,8 @@ export function InlineFigure({
             );
           }
         } catch {
-          // The page snapshot is still available.
+          // No crop for this page. Never substitute the full page: a text-only
+          // page is not a diagram.
         }
       }
     })();
@@ -73,33 +75,21 @@ export function InlineFigure({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId, pageKey, settings]);
 
-  if (loading && images.length === 0 && figures.length === 0) {
-    return pageFallback ? (
-      <span className="inline-figure-skeleton" aria-hidden="true" />
-    ) : null;
-  }
+  if (loading) return null;
 
-  const filteredFigures = pageFilter
-    ? figures.filter((figure) => figure.pageNo === pageFilter)
-    : figures;
-  const filteredImages = pageFilter
-    ? images.filter((image) => image.pageNo === pageFilter)
-    : images;
-
-  const figure = filteredFigures[0] ?? figures[0];
-  const image = filteredImages[0] ?? images[0];
-  if (!figure && !pageFallback) return null;
-  const src = figure?.dataUrl ?? image?.dataUrl;
-  if (!src) return null;
+  const figure = pageFilter
+    ? figures.find((item) => item.pageNo === pageFilter)
+    : figures[0];
+  if (!figure) return null;
 
   return (
     <button
       type="button"
       className="inline-figure"
-      onClick={() => onOpen(src)}
-      aria-label="Open the figure from the note"
+      onClick={() => onOpen(figure.dataUrl)}
+      aria-label={`Open the diagram from page ${figure.pageNo}`}
     >
-      <img src={src} alt="" loading="lazy" />
+      <img src={figure.dataUrl} alt="" loading="lazy" />
     </button>
   );
 }

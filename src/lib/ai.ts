@@ -663,7 +663,7 @@ function normaliseFigureBox(
   const height = ymax - ymin;
   if (width < 55 || height < 55) return null;
   const area = (width * height) / 1_000_000;
-  if (area < 0.025 || area > 0.86) return null;
+  if (area < 0.025 || area > 0.62) return null;
   return [ymin, xmin, ymax, xmax];
 }
 
@@ -698,14 +698,16 @@ export async function findFigures(args: {
     settings,
     system:
       "You find the informative visuals in textbook pages. You never invent a figure that is not visible.",
-    prompt: `The image is one page from a dental textbook. Find up to 4 distinct figures, diagrams, photographs, charts, or tables that would help a student understand the page.
+    prompt: `The image is one page from a dental textbook. Find up to 4 distinct visuals: drawings, diagrams, photographs, charts, or tables that would help a student understand the page.
+
+A visual must contain a drawing, photograph, chart, table, or diagram. A heading, paragraph, bullet list, callout box, highlighted sentence, or any block of body text is NOT a visual. Do not return a box around text.
 
 For each visual return:
 - box: [ymin, xmin, ymax, xmax] normalized to 0–1000, tightly around the visual including its labels, legend, and caption, but excluding the surrounding body text.
 - caption: use the figure's printed caption when there is one; otherwise write a short descriptive caption (max 14 words).
 - kind: figure, diagram, photo, table, or chart.
 
-Ignore page headers, page numbers, logos, decorative rules, highlighted words, and ordinary blocks of text. Do not include the same visual twice. If there are no informative visuals, return an empty array.
+Ignore page headers, page numbers, logos, decorative rules, and all ordinary text. If the page is text-only, return an empty array. Never guess or label a block of text as a visual.
 
 This is page ${pageNo}.`,
     image: { mimeType, data },

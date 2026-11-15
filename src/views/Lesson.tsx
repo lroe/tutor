@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -100,16 +99,6 @@ export function Lesson({
     (message) =>
       message.kind === "teach" && message.conceptIndex === activeIndex,
   );
-  const latestTeachId = useMemo(() => {
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-      const message = messages[index];
-      if (message.kind === "teach" && message.conceptIndex === activeIndex) {
-        return message.id;
-      }
-    }
-    return undefined;
-  }, [messages, activeIndex]);
-
   const scrollTrigger = `${messages.length}:${live?.text.length ?? 0}:${
     busy ?? ""
   }:${activeCheck?.question ?? ""}:${isDone ? "done" : ""}`;
@@ -637,7 +626,6 @@ export function Lesson({
                   ? lesson.plan[message.conceptIndex]
                   : undefined
               }
-              isActiveTeach={message.id === latestTeachId}
               bookId={lesson.bookId}
               settings={settings}
               onOpenImage={setImage}
@@ -765,14 +753,12 @@ function ChatBar({ title, onBack }: { title: string; onBack: () => void }) {
 function MessageRow({
   message,
   concept,
-  isActiveTeach,
   bookId,
   settings,
   onOpenImage,
 }: {
   message: Message;
   concept?: Concept;
-  isActiveTeach: boolean;
   bookId: string;
   settings: Settings;
   onOpenImage: (src: string) => void;
@@ -808,32 +794,6 @@ function MessageRow({
           onOpen={onOpenImage}
         />
         <Markdown>{after}</Markdown>
-        {showCheck && <p className="assistant-check">{check}</p>}
-      </div>
-    );
-  }
-
-  if (isActiveTeach && concept) {
-    let explanation = message.content;
-    let tail = "";
-    if (check) {
-      const index = message.content.lastIndexOf(check);
-      if (index >= 0) {
-        explanation = message.content.slice(0, index);
-        tail = message.content.slice(index);
-      }
-    }
-    return (
-      <div className="assistant">
-        <Markdown>{explanation}</Markdown>
-        <InlineFigure
-          bookId={bookId}
-          pageNumbers={concept.pages}
-          pageFallback={false}
-          settings={settings}
-          onOpen={onOpenImage}
-        />
-        {tail && <Markdown>{tail}</Markdown>}
         {showCheck && <p className="assistant-check">{check}</p>}
       </div>
     );

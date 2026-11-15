@@ -137,9 +137,10 @@ Gemini. There is no model picker.
   returns boxes; Cove crops those regions locally and caches them.
 - The teaching prompt places a figure token at the exact point where the visual
   belongs. Cove renders the cropped diagram inline there, between the paragraphs.
-- If a crop isn't ready, the page snapshot is shown as a fallback. If the model
-  doesn't place a token, a detected figure is shown between the explanation and
-  the check.
+- Cove shows only real cropped figures. It never substitutes a full page for a
+  diagram, so a text-only page cannot appear as a picture. If the model doesn't
+  place a token, a detected figure is shown between the explanation and the
+  check.
 - Tap the diagram to view it full screen.
 - Scanned/image-only pages are OCR'd automatically when you build a lesson.
 - Selected page text and page images go to the model. The PDF itself stays on
@@ -211,8 +212,9 @@ subscription is the bigger cost, and you already have it for coding.
   it; clearing Safari data removes it. Keep the original PDFs in Files/Drive.
 - The model can be wrong. The page citations and page snapshots are there so she
   can check the source.
-- OCR and figure cropping can make mistakes. A full page snapshot is always
-  available.
+- OCR and figure cropping can make mistakes. Tap a diagram to open it full
+  screen. If a page has no real visual, Cove shows no picture rather than a fake
+  one.
 - Each teaching/chat turn resends the selected chapter text, so longer ranges
   cost more. Page images for OCR/figures are cached after the first time.
 - The Worker sees the prompts and page images it forwards. Cloudflare does not
