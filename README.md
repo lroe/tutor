@@ -25,6 +25,26 @@ Cloudflare.
 
 ---
 
+## Deployments
+
+| | |
+| --- | --- |
+| iPhone/PWA | https://cove-iphone.pages.dev |
+| iPhone Worker | second Cloudflare account (see `.env.local`) |
+| Android | separate repo, existing Worker |
+
+The iPhone Worker runs on a second Cloudflare account, so its free daily
+request budget is independent from Android. Both Workers can use the same
+OpenCode Go key; the Go allowance is shared.
+
+The iPhone Worker allows only the Pages origin and local development:
+
+```text
+https://cove-iphone.pages.dev,http://localhost:4173,http://localhost:5173
+```
+
+---
+
 ## Deploy the Worker (once)
 
 The Worker is a free proxy. It adds your OpenCode Go key and the CORS header
@@ -216,18 +236,19 @@ TestFlight, no App Store, no Mac. It runs in Safari and installs to the Home
 Screen as a standalone app with its own icon and dark launch screen.
 
 1. Deploy the Worker (above).
-2. Build with the Worker URL baked in:
+2. Build with the Worker URL baked in. This machine's `.env.local` already
+   points at the iPhone Worker; to use a different one:
 
    ```bash
-   VITE_COVE_PROXY_URL=https://cove-proxy.you.workers.dev npm run build
+   VITE_COVE_PROXY_URL=https://your-worker.workers.dev npm run build
    ```
 
    Or build without it and paste the Worker URL in Cove's Settings later.
-3. Upload `dist/` to Cloudflare Pages (see below).
-4. On the iPhone: open the HTTPS link in **Safari** → **Share → Add to Home
-   Screen → Add**.
-5. Open Cove from its icon. If the Worker URL wasn't baked in, paste it from the
-   gear. **Use default** restores it if you change it later.
+3. Upload `dist/` to the `cove-iphone` Cloudflare Pages project (see below).
+4. On the iPhone: open **https://cove-iphone.pages.dev** in **Safari** →
+   **Share → Add to Home Screen → Add**.
+5. Open Cove from its icon. The iPhone Worker is already the default; the gear
+   still lets you change it, and **Use default** restores it.
 
 ### Cloudflare Pages
 
@@ -236,11 +257,14 @@ pipeline:
 
 ```bash
 npm run build
-npx wrangler pages deploy dist --project-name cove
+npx wrangler pages deploy dist --project-name cove-iphone --branch main
 ```
 
 The first deploy asks you to log in and creates the project. Later deploys use
-the same command. The site is served from `https://<project>.pages.dev`.
+the same command. The project is served from `https://cove-iphone.pages.dev`.
+
+You can also use **Pages → cove-iphone → Create deployment → Upload assets**
+with the contents of `dist/` (or a zip of `dist/`).
 
 `public/_headers` keeps `index.html`, `sw.js`, and the manifest out of the
 cache so an installed app picks up new builds. Hashed files under `/assets/`
@@ -260,6 +284,18 @@ Add to Home Screen on HTTPS (or localhost), so the hosted link is the real path.
 The iPhone build includes `apple-touch-startup-image` splash screens for current
 iPhones, from the 320×568 SE up to the 440×956 Pro Max. Safe-area insets and the
 visual viewport are handled so the composer stays above the keyboard.
+
+### Redeploying the live iPhone app
+
+```bash
+npm run build
+cd dist && zip -qr ../cove-iphone-pages.zip .
+```
+
+Upload the new zip in the `cove-iphone` Pages project. The `_headers` file keeps
+`index.html` and `sw.js` out of the cache so an installed app picks up the new
+build. No Worker change is needed unless the Worker URL or allowed origins
+change.
 
 ---
 
