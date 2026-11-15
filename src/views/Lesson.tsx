@@ -401,6 +401,9 @@ export function Lesson({
           raw,
           concept.title,
         );
+        // The stream is complete. Drop the live bubble before the IndexedDB
+        // writes so a slow write cannot show the same text twice.
+        setLive(null);
         const hasTextbook = textbook.length > 0;
         const messageId = await db.messages.add({
           lessonId: lesson.id,
@@ -447,7 +450,6 @@ export function Lesson({
             updatedAt: Date.now(),
           });
         }
-        setLive(null);
       } catch (caught) {
         if (!mountedRef.current || isAbort(caught)) return;
         setLive(null);
