@@ -97,6 +97,7 @@ export interface Concept {
 }
 
 export type LessonMode =
+  | "eli5-textbook"
   | "textbook"
   | "eli5"
   | "socratic"

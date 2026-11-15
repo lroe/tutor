@@ -10,6 +10,14 @@ export interface ModeInfo {
 
 export const MODES: ModeInfo[] = [
   {
+    id: "eli5-textbook",
+    label: "ELI5 + textbook",
+    short: "ELI5 + textbook",
+    description: "Simple first, then the textbook version.",
+    prompt:
+      "Teach in two parts. Part 1: explain like she is five. Use short sentences, everyday words, and one concrete analogy. Introduce the proper term only after the simple explanation. End Part 1 with one check question after ---CHECK---. Part 2: after the check question, put ---TEXTBOOK--- on its own line, then give the same idea in precise textbook language. Do not label Part 2, do not say it is a restatement, and do not repeat the check question or add another question. Keep Part 2 to 2-4 sentences. Put any figure token in Part 1 only.",
+  },
+  {
     id: "textbook",
     label: "Textbook",
     short: "Textbook",
@@ -59,7 +67,7 @@ export const MODES: ModeInfo[] = [
   },
 ];
 
-export const DEFAULT_MODE: LessonMode = "eli5";
+export const DEFAULT_MODE: LessonMode = "eli5-textbook";
 
 export function modeInfo(mode: LessonMode | undefined): ModeInfo {
   return (

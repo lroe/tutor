@@ -141,11 +141,12 @@ export function Lesson({
   );
   const mode = lesson?.mode ?? DEFAULT_MODE;
   const style = useMemo(() => styleFor(messages), [messages]);
-  const teachFigureAllowed = useMemo(() => {
+  const staticFigureAllowed = useMemo(() => {
     const seen = new Set<number>();
     const allowed = new Set<number>();
     for (const message of messages) {
-      if (message.kind !== "teach" || message.id === undefined) continue;
+      if (message.id === undefined) continue;
+      if (message.kind !== "teach" && message.kind !== "note") continue;
       const match = message.content.match(FIGURE_TOKEN);
       if (!match) continue;
       const page = Number(match[1]);
@@ -318,16 +319,32 @@ export function Lesson({
         });
         if (controller.signal.aborted || !mountedRef.current) return;
 
-        const { explanation, check } = parseTeach(raw, concept.title);
+        const { explanation, check, textbook } = parseTeach(
+          raw,
+          concept.title,
+        );
+        const hasTextbook = textbook.length > 0;
         const messageId = await db.messages.add({
           lessonId: lesson.id,
           role: "tutor",
           kind: "teach",
-          content: `${explanation}\n\n${check}`,
+          content: hasTextbook ? explanation : `${explanation}\n\n${check}`,
           conceptIndex: index,
-          checkQuestion: check,
+          checkQuestion: hasTextbook ? undefined : check,
           createdAt: Date.now(),
         });
+        let checkMessageId = messageId;
+        if (hasTextbook) {
+          checkMessageId = await db.messages.add({
+            lessonId: lesson.id,
+            role: "tutor",
+            kind: "note",
+            content: `${textbook}\n\n${check}`,
+            conceptIndex: index,
+            checkQuestion: check,
+            createdAt: Date.now() + 1,
+          });
+        }
         const latest = await db.lessons.get(lesson.id);
         if (latest) {
           const nextPlan = latest.plan.map((item, itemIndex) =>
@@ -336,7 +353,7 @@ export function Lesson({
                   ...item,
                   check: {
                     question: check,
-                    messageId,
+                    messageId: checkMessageId,
                     answered: false,
                     attempts: 0,
                   },
@@ -704,8 +721,8 @@ export function Lesson({
                   : undefined
               }
               allowFigure={
-                message.kind !== "teach" ||
-                teachFigureAllowed.has(message.id ?? -1)
+                (message.kind !== "teach" && message.kind !== "note") ||
+                staticFigureAllowed.has(message.id ?? -1)
               }
               bookId={lesson.bookId}
               settings={settings}
@@ -882,7 +899,11 @@ function MessageRow({
   let body = extracted.text;
   const rawCheck = message.checkQuestion;
   const check = rawCheck ? extractSources(rawCheck).text : undefined;
-  const showCheck = Boolean(check) && !body.includes(check ?? "");
+  if (check) {
+    const index = body.lastIndexOf(check);
+    if (index >= 0) body = body.slice(0, index).trimEnd();
+  }
+  const showCheck = Boolean(check);
 
   const figureMatch = body.match(FIGURE_TOKEN);
   const renderFigure = Boolean(figureMatch && concept && allowFigure);

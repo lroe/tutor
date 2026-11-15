@@ -100,15 +100,21 @@ Two sample notes are in `sample/`:
 
 ### Learning modes
 
-Every new lesson starts in **ELI5** mode. Tap the mode chip above the message
-box to switch:
+Every new lesson starts in **ELI5 + textbook** mode. Tap the mode chip above
+the message box to switch:
 
-- **ELI5** — everyday words and one concrete analogy. Default.
+- **ELI5 + textbook** — simple first, then the textbook version and check
+  question in the next message. **Default.**
+- **ELI5** — everyday words and one concrete analogy.
 - **Textbook** — plain language first, then the proper term.
 - **Socratic** — one short orientation, then a question that makes you reason.
 - **First principles** — build from basic facts, step by step.
 - **Clinical** — start with a patient scenario, then the mechanism.
 - **Exam** — high-yield distinctions and memory hooks.
+
+In the default mode, the first message explains the idea simply, with the
+diagram. The next message gives the same idea in precise textbook language, then
+asks the check question. There is no “restated” label and no repeated question.
 
 The mode belongs to that lesson only. A new page range starts fresh.
 
