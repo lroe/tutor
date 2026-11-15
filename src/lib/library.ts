@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { extractPdf } from "./pdf";
+import { DEFAULT_MODE } from "./modes";
 import type { Book, Chapter, Lesson } from "./types";
 import { uid } from "./util";
 
@@ -84,6 +85,7 @@ export async function openLesson(
     plan: [],
     currentIndex: 0,
     status: "planning",
+    mode: DEFAULT_MODE,
     createdAt: now,
     updatedAt: now,
   };

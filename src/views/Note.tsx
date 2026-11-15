@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft, Check, ChevronRight, Circle } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Circle, Trash2 } from "lucide-react";
 import { SettingsSheet } from "../components/SettingsSheet";
 import { PageSheet } from "../components/PageSheet";
+import { Sheet } from "../components/Sheet";
 import { Spinner } from "../components/Brand";
-import { db } from "../lib/db";
+import { db, deleteBookDeep } from "../lib/db";
 import { customChapter, openLesson } from "../lib/library";
 import { isConfigured } from "../lib/provider";
 import type { Book, Lesson, Settings } from "../lib/types";
@@ -28,6 +29,10 @@ export function Note({
   );
   const [pageOpen, setPageOpen] = useState(Boolean(autoPages));
   const [keyOpen, setKeyOpen] = useState(false);
+  const [showConcepts, setShowConcepts] = useState(true);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [pending, setPending] = useState<{
     book: Book;
     start: number;
@@ -69,6 +74,20 @@ export function Note({
   const closeKey = () => {
     setKeyOpen(false);
     setPending(null);
+  };
+
+  const removeBook = async () => {
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteBookDeep(id);
+      navigate("/");
+    } catch (error) {
+      setDeleting(false);
+      setDeleteError(
+        error instanceof Error ? error.message : "Couldn’t delete this note.",
+      );
+    }
   };
 
   if (book === undefined) {
@@ -135,7 +154,7 @@ export function Note({
       sum + lesson.plan.filter((concept) => concept.covered).length,
     0,
   );
-  const ordered = [...lessons].sort((a, b) => a.createdAt - b.createdAt);
+  const ordered = [...lessons].sort((a, b) => b.updatedAt - a.updatedAt);
 
   return (
     <div className="note">
@@ -151,11 +170,30 @@ export function Note({
         <div className="chat-title" title={book.title}>
           {book.title}
         </div>
-        <span className="chat-bar-spacer" />
+        <button
+          type="button"
+          className="icon-button note-delete"
+          onClick={() => {
+            setDeleteError("");
+            setDeleteOpen(true);
+          }}
+          aria-label="Delete note"
+        >
+          <Trash2 size={18} />
+        </button>
       </header>
 
       <div className="note-scroll">
-        <p className="note-eyebrow">Progress</p>
+        <div className="note-progress-head">
+          <p className="note-eyebrow">Progress</p>
+          <button
+            type="button"
+            className="text-button note-toggle"
+            onClick={() => setShowConcepts((current) => !current)}
+          >
+            {showConcepts ? "Hide concepts" : "Show concepts"}
+          </button>
+        </div>
         <p className="note-learned">
           {learned > 0
             ? `${learned} ${learned === 1 ? "idea" : "ideas"} learned`
@@ -234,7 +272,7 @@ export function Note({
                     <div className="lesson-group-head">{head}</div>
                   )}
 
-                  {lesson.plan.length > 0 ? (
+                  {lesson.plan.length > 0 && showConcepts ? (
                     <ul className="concept-list">
                       {lesson.plan.map((concept) => (
                         <li
@@ -256,7 +294,7 @@ export function Note({
                         </li>
                       ))}
                     </ul>
-                  ) : (
+                  ) : lesson.plan.length === 0 ? (
                     <p className="note-empty">
                       {lesson.status === "error"
                         ? "Couldn’t build this lesson. Tap the title to retry."
@@ -264,7 +302,7 @@ export function Note({
                           ? "Preparing the ideas…"
                           : "No ideas yet."}
                     </p>
-                  )}
+                  ) : null}
                 </section>
               );
             })}
@@ -286,6 +324,42 @@ export function Note({
           onClose={closeKey}
           onSave={saveSettings}
         />
+      )}
+
+      {deleteOpen && (
+        <Sheet
+          open
+          onClose={() => {
+            if (!deleting) setDeleteOpen(false);
+          }}
+          title="Delete this note?"
+          footer={
+            <div className="confirm-actions">
+              <button
+                type="button"
+                className="danger-button"
+                disabled={deleting}
+                onClick={() => void removeBook()}
+              >
+                {deleting ? "Deleting…" : "Delete note"}
+              </button>
+              <button
+                type="button"
+                className="text-button confirm-cancel"
+                disabled={deleting}
+                onClick={() => setDeleteOpen(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          }
+        >
+          <p className="confirm-copy">
+            This removes the PDF, every lesson, and all progress for this note
+            from this device. It cannot be undone.
+          </p>
+          {deleteError && <p className="confirm-error">{deleteError}</p>}
+        </Sheet>
       )}
     </div>
   );

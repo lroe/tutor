@@ -98,6 +98,25 @@ Two sample notes are in `sample/`:
    **Finish**.
 5. You land on the note's **Progress** page.
 
+### Learning modes
+
+Every new lesson starts in **ELI5** mode. Tap the mode chip above the message
+box to switch:
+
+- **ELI5** — everyday words and one concrete analogy. Default.
+- **Textbook** — plain language first, then the proper term.
+- **Socratic** — one short orientation, then a question that makes you reason.
+- **First principles** — build from basic facts, step by step.
+- **Clinical** — start with a patient scenario, then the mechanism.
+- **Exam** — high-yield distinctions and memory hooks.
+
+The mode belongs to that lesson only. A new page range starts fresh.
+
+You can also type a style in chat, for example **“ELI5”**, **“teach like a
+textbook”**, or **“shorter”**. Cove remembers the latest style request for the
+rest of that lesson, even after you change the mode. There is no persona
+setting and nothing is stored across lessons.
+
 ### Progress for each note
 
 Tap any note on home. Its Progress page shows:
@@ -105,11 +124,16 @@ Tap any note on home. Its Progress page shows:
 - **N ideas learned**.
 - **Continue lesson** if a lesson is in progress.
 - **New pages** — start a different page range for the same note.
-- Every lesson range, with every concept listed and checked off as you learn it.
+- **Hide concepts / Show concepts** — collapse the concept lists when you only
+  want the page ranges.
+- Every lesson range, newest used first, with every concept listed and checked
+  off as you learn it.
+- **Delete note** — the trash icon in the header removes the PDF, lessons, and
+  progress from this device.
 
-The home note list is the overview. The note page is the detailed progress.
-Starting **New pages** creates another lesson group on the same page, so a note
-can have several ranges over time.
+The home note list is the overview, sorted by the note you opened last, with the
+latest page range under the title. Starting **New pages** creates another lesson
+group on the same page, so a note can have several ranges over time.
 
 The tutor still asks a short check after each idea. You can answer it, ask
 something else, or skip it with **Next**. When you get something wrong, it gives
@@ -139,8 +163,10 @@ Gemini. There is no model picker.
   belongs. Cove renders the cropped diagram inline there, between the paragraphs.
 - Cove shows only real cropped figures. It never substitutes a full page for a
   diagram, so a text-only page cannot appear as a picture.
-- You can ask **"show that figure"** in chat. Cove inserts the figure token and
-  renders the crop inline. It never claims it cannot display images.
+- The same figure is shown once in a lesson’s teaching messages, not repeated in
+  every message. You can still ask **"show that figure"** in chat.
+- Page citations are kept out of the prose. They appear once in a small `p. 5`
+  footer at the bottom of the message.
 - Tap the diagram to view it full screen.
 - Scanned/image-only pages are OCR'd automatically when you build a lesson.
 - Selected page text and page images go to the model. The PDF itself stays on
@@ -210,8 +236,8 @@ subscription is the bigger cost, and you already have it for coding.
 - No accounts, analytics, tracking, sync, or cloud backup.
 - iOS Safari storage is tied to the site. Adding to the Home Screen helps keep
   it; clearing Safari data removes it. Keep the original PDFs in Files/Drive.
-- The model can be wrong. The page citations and page snapshots are there so she
-  can check the source.
+- The model can be wrong. The page citations in each message are there so she
+  can check the source PDF.
 - OCR and figure cropping can make mistakes. Tap a diagram to open it full
   screen. If a page has no real visual, Cove shows no picture rather than a fake
   one.

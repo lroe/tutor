@@ -96,6 +96,14 @@ export interface Concept {
   reviewCount?: number;
 }
 
+export type LessonMode =
+  | "textbook"
+  | "eli5"
+  | "socratic"
+  | "first-principles"
+  | "clinical"
+  | "exam";
+
 export interface Lesson {
   id: string;
   bookId: string;
@@ -107,6 +115,7 @@ export interface Lesson {
   plan: Concept[];
   currentIndex: number;
   status: "planning" | "active" | "done" | "error";
+  mode?: LessonMode;
   createdAt: number;
   updatedAt: number;
 }

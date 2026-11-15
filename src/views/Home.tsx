@@ -71,6 +71,9 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
           <div className="note-list">
             {books.map((book) => {
               const count = countFor(book.id);
+              const latest = lessons
+                .filter((lesson) => lesson.bookId === book.id)
+                .sort((a, b) => b.updatedAt - a.updatedAt)[0];
               return (
                 <button
                   key={book.id}
@@ -78,14 +81,24 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
                   className="note-row"
                   onClick={() => {
                     setHomeError("");
+                    void db.books.update(book.id, {
+                      lastOpenedAt: Date.now(),
+                    });
                     navigate(`/note/${book.id}`);
                   }}
                 >
                   <span className="note-title">{book.title}</span>
                   <span className="note-count">
+                    {latest ? `${latest.chapterTitle} · ` : ""}
                     {count > 0
                       ? `${count} ${count === 1 ? "idea" : "ideas"} learned`
-                      : "No ideas yet"}
+                      : latest?.status === "planning"
+                        ? "Preparing…"
+                        : latest?.status === "error"
+                          ? "Couldn’t build"
+                          : latest
+                            ? "Not started"
+                            : "No ideas yet"}
                   </span>
                 </button>
               );

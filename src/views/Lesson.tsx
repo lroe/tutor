@@ -1,15 +1,23 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft, ArrowUp, ChevronRight } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUp,
+  ChevronDown,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
 import { Markdown } from "../components/Markdown";
 import { Spinner, TypingDots } from "../components/Brand";
 import { ImageViewer } from "../components/ImageViewer";
 import { InlineFigure } from "../components/InlineFigure";
+import { ModeSheet } from "../components/ModeSheet";
 import { db, pagesFor } from "../lib/db";
 import {
   answerQuestion,
@@ -21,13 +29,16 @@ import {
   visibleTeach,
 } from "../lib/ai";
 import { describeAIError } from "../lib/gemini";
+import { DEFAULT_MODE, modeInfo } from "../lib/modes";
 import { isConfigured, missingConfig } from "../lib/provider";
+import { isStyleInstruction, styleFor } from "../lib/style";
 import { readScannedPages } from "../lib/ocr";
 import type {
   Concept,
   Evaluation,
   Mastery,
   Message,
+  LessonMode,
   PageText,
   Settings,
   Verdict,
@@ -37,6 +48,34 @@ import { useAutoScroll } from "../hooks/useAutoScroll";
 import { useSettings } from "../state/settings";
 
 type Busy = "planning" | "teaching" | "chat" | "grading" | null;
+
+const FIGURE_TOKEN = /\[\[\s*figure\s*:?\s*(?:p\.?\s*)?(\d+)\s*\]\]/i;
+const FIGURE_TOKEN_ALL = /\[\[\s*figure\s*:?\s*(?:p\.?\s*)?\d*\s*\]\]/gi;
+
+function extractSources(content: string): { text: string; sources: string[] } {
+  const sources: string[] = [];
+  const pattern =
+    /\((?:p|pp)\.?\s*\d+(?:\s*[–-]\s*\d+)?(?:\s*,\s*\d+(?:\s*[–-]\s*\d+)?)*\)/gi;
+  const text = content
+    .replace(pattern, (match) => {
+      const inner = match
+        .slice(1, -1)
+        .replace(/^p{1,2}\.?\s*/i, "")
+        .trim();
+      if (inner && !sources.includes(inner)) sources.push(inner);
+      return "";
+    })
+    .replace(/[ \t]+([.,;:!?])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/^[ \t]+/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return { text, sources };
+}
+
+function sourceLabel(source: string): string {
+  return `${/[,\u2013-]/.test(source) ? "pp." : "p."} ${source}`;
+}
 
 interface LiveState {
   mode: "teach" | "chat";
@@ -80,6 +119,7 @@ export function Lesson({
   const [composer, setComposer] = useState("");
   const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
   const [image, setImage] = useState<string | null>(null);
+  const [modeOpen, setModeOpen] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const planStartedRef = useRef<string | null>(null);
@@ -99,6 +139,22 @@ export function Lesson({
     (message) =>
       message.kind === "teach" && message.conceptIndex === activeIndex,
   );
+  const mode = lesson?.mode ?? DEFAULT_MODE;
+  const style = useMemo(() => styleFor(messages), [messages]);
+  const teachFigureAllowed = useMemo(() => {
+    const seen = new Set<number>();
+    const allowed = new Set<number>();
+    for (const message of messages) {
+      if (message.kind !== "teach" || message.id === undefined) continue;
+      const match = message.content.match(FIGURE_TOKEN);
+      if (!match) continue;
+      const page = Number(match[1]);
+      if (seen.has(page)) continue;
+      seen.add(page);
+      allowed.add(message.id);
+    }
+    return allowed;
+  }, [messages]);
   const scrollTrigger = `${messages.length}:${live?.text.length ?? 0}:${
     busy ?? ""
   }:${activeCheck?.question ?? ""}:${isDone ? "done" : ""}`;
@@ -116,6 +172,13 @@ export function Lesson({
       abortRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (!lesson) return;
+    void db.lessons.update(lesson.id, { updatedAt: Date.now() });
+    void db.books.update(lesson.bookId, { lastOpenedAt: Date.now() });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lesson?.id]);
 
   useEffect(() => {
     if (!lesson) return;
@@ -243,6 +306,8 @@ export function Lesson({
           plan: lesson.plan,
           index,
           history: messagesToTurns(messages),
+          mode,
+          style,
           onDelta: (delta) => {
             if (!mountedRef.current) return;
             setLive((current) =>
@@ -295,7 +360,7 @@ export function Lesson({
         }
       }
     },
-    [lesson, pages, messages, settings, jumpToEnd],
+    [lesson, pages, messages, settings, mode, style, jumpToEnd],
   );
 
   useEffect(() => {
@@ -381,6 +446,12 @@ export function Lesson({
     });
   };
 
+  const selectMode = async (next: LessonMode) => {
+    if (!lesson) return;
+    setModeOpen(false);
+    await db.lessons.update(lesson.id, { mode: next, updatedAt: Date.now() });
+  };
+
   const send = async (override?: string, alreadySaved = false) => {
     if (!lesson || !pages || busy) return;
     const text = (override ?? composer).trim();
@@ -395,6 +466,8 @@ export function Lesson({
     const index = activeIndex;
     const concept = lesson.plan[index];
     if (!concept) return;
+    const styleRequest = isStyleInstruction(text);
+    const nextStyle = styleRequest ? text : style;
 
     setSendError(null);
     if (!alreadySaved) {
@@ -413,7 +486,7 @@ export function Lesson({
     const pending =
       concept.check && !concept.check.answered ? concept.check : null;
 
-    if (pending) {
+    if (pending && !styleRequest) {
       setBusy("grading");
       try {
         const evaluation = await evaluateAnswer({
@@ -425,6 +498,8 @@ export function Lesson({
           check: pending.question,
           message: text,
           attempt: pending.attempts + 1,
+          mode,
+          style,
         });
         if (!mountedRef.current) return;
         await applyEvaluation(evaluation, index, pending.question);
@@ -458,6 +533,8 @@ export function Lesson({
         index,
         history: messagesToTurns([...messages, studentMessage]),
         question: text,
+        mode,
+        style: nextStyle,
         onDelta: (delta) => {
           if (!mountedRef.current) return;
           setLive((current) =>
@@ -626,6 +703,10 @@ export function Lesson({
                   ? lesson.plan[message.conceptIndex]
                   : undefined
               }
+              allowFigure={
+                message.kind !== "teach" ||
+                teachFigureAllowed.has(message.id ?? -1)
+              }
               bookId={lesson.bookId}
               settings={settings}
               onOpenImage={setImage}
@@ -636,9 +717,13 @@ export function Lesson({
             <div className="assistant">
               {live.text ? (
                 <Markdown>
-                  {live.mode === "teach"
-                    ? visibleTeach(live.text)
-                    : live.text}
+                  {
+                    extractSources(
+                      live.mode === "teach"
+                        ? visibleTeach(live.text)
+                        : live.text,
+                    ).text
+                  }
                 </Markdown>
               ) : (
                 <TypingDots />
@@ -682,6 +767,18 @@ export function Lesson({
 
       {!isDone && (
         <footer className="chat-foot">
+          <div className="mode-row">
+            <button
+              type="button"
+              className="mode-chip"
+              onClick={() => setModeOpen(true)}
+              aria-label="Change learning mode"
+            >
+              <Sparkles size={13} />
+              <span>{modeInfo(mode).label}</span>
+              <ChevronDown size={13} />
+            </button>
+          </div>
           {showNext && (
             <div className="next-row">
               <button
@@ -724,6 +821,14 @@ export function Lesson({
         </footer>
       )}
 
+      {modeOpen && (
+        <ModeSheet
+          mode={mode}
+          onSelect={(next) => void selectMode(next)}
+          onClose={() => setModeOpen(false)}
+        />
+      )}
+
       {image && (
         <ImageViewer src={image} onClose={() => setImage(null)} />
       )}
@@ -753,12 +858,14 @@ function ChatBar({ title, onBack }: { title: string; onBack: () => void }) {
 function MessageRow({
   message,
   concept,
+  allowFigure,
   bookId,
   settings,
   onOpenImage,
 }: {
   message: Message;
   concept?: Concept;
+  allowFigure: boolean;
   bookId: string;
   settings: Settings;
   onOpenImage: (src: string) => void;
@@ -771,38 +878,53 @@ function MessageRow({
     );
   }
 
-  const check = message.checkQuestion;
-  const showCheck = Boolean(check) && !message.content.includes(check ?? "");
-  const figureMatch = message.content.match(
-    /\[\[\s*figure\s*:?\s*(?:p\.?\s*)?(\d+)\s*\]\]/i,
-  );
+  const extracted = extractSources(message.content);
+  let body = extracted.text;
+  const rawCheck = message.checkQuestion;
+  const check = rawCheck ? extractSources(rawCheck).text : undefined;
+  const showCheck = Boolean(check) && !body.includes(check ?? "");
 
-  if (figureMatch?.index !== undefined && concept) {
-    const before = message.content.slice(0, figureMatch.index);
-    const after = message.content
+  const figureMatch = body.match(FIGURE_TOKEN);
+  const renderFigure = Boolean(figureMatch && concept && allowFigure);
+  if (figureMatch && !renderFigure) {
+    body = body.replace(FIGURE_TOKEN_ALL, "").trim();
+  }
+
+  const sourcesNode =
+    extracted.sources.length > 0 ? (
+      <p className="assistant-sources">
+        {extracted.sources.map(sourceLabel).join(" · ")}
+      </p>
+    ) : null;
+
+  if (renderFigure && figureMatch?.index !== undefined && concept) {
+    const before = body.slice(0, figureMatch.index);
+    const after = body
       .slice(figureMatch.index + figureMatch[0].length)
-      .replace(/\[\[\s*figure\s*:?\s*(?:p\.?\s*)?\d*\s*\]\]/gi, "");
-    const pageFilter = figureMatch[1] ? Number(figureMatch[1]) : undefined;
+      .replace(FIGURE_TOKEN_ALL, "");
+    const pageFilter = Number(figureMatch[1]);
     return (
       <div className="assistant">
         <Markdown>{before}</Markdown>
         <InlineFigure
           bookId={bookId}
-          pageNumbers={pageFilter ? [pageFilter] : concept.pages}
+          pageNumbers={[pageFilter]}
           pageFilter={pageFilter}
           settings={settings}
           onOpen={onOpenImage}
         />
         <Markdown>{after}</Markdown>
         {showCheck && <p className="assistant-check">{check}</p>}
+        {sourcesNode}
       </div>
     );
   }
 
   return (
     <div className="assistant">
-      <Markdown>{message.content}</Markdown>
+      <Markdown>{body}</Markdown>
       {showCheck && <p className="assistant-check">{check}</p>}
+      {sourcesNode}
     </div>
   );
 }
