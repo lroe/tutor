@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Settings as SettingsIcon } from "lucide-react";
+import { Plus, Settings as SettingsIcon, Trash2 } from "lucide-react";
 import { Wordmark } from "../components/Brand";
 import { SettingsSheet } from "../components/SettingsSheet";
+import { Sheet } from "../components/Sheet";
 import { UploadOverlay } from "../components/UploadOverlay";
-import { db } from "../lib/db";
+import { db, deleteBookDeep } from "../lib/db";
 import type { Book, Lesson } from "../lib/types";
 import { useSettings } from "../state/settings";
 
@@ -24,6 +25,9 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [keyOpen, setKeyOpen] = useState(false);
   const [homeError, setHomeError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Book | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const countFor = (bookId: string) =>
@@ -34,6 +38,22 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
           sum + lesson.plan.filter((concept) => concept.covered).length,
         0,
       );
+
+  const removeBook = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteBookDeep(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "Couldn’t delete this note.",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const onFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -78,32 +98,44 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
                 .filter((lesson) => lesson.bookId === book.id)
                 .sort((a, b) => b.updatedAt - a.updatedAt)[0];
               return (
-                <button
-                  key={book.id}
-                  type="button"
-                  className="note-row"
-                  onClick={() => {
-                    setHomeError("");
-                    void db.books.update(book.id, {
-                      lastOpenedAt: Date.now(),
-                    });
-                    navigate(`/note/${book.id}`);
-                  }}
-                >
-                  <span className="note-title">{book.title}</span>
-                  <span className="note-count">
-                    {latest ? `${latest.chapterTitle} · ` : ""}
-                    {count > 0
-                      ? `${count} ${count === 1 ? "idea" : "ideas"} learned`
-                      : latest?.status === "planning"
-                        ? "Preparing…"
-                        : latest?.status === "error"
-                          ? "Couldn’t build"
-                          : latest
-                            ? "Not started"
-                            : "No ideas yet"}
-                  </span>
-                </button>
+                <div className="note-row" key={book.id}>
+                  <button
+                    type="button"
+                    className="note-main"
+                    onClick={() => {
+                      setHomeError("");
+                      void db.books.update(book.id, {
+                        lastOpenedAt: Date.now(),
+                      });
+                      navigate(`/note/${book.id}`);
+                    }}
+                  >
+                    <span className="note-title">{book.title}</span>
+                    <span className="note-count">
+                      {latest ? `${latest.chapterTitle} · ` : ""}
+                      {count > 0
+                        ? `${count} ${count === 1 ? "idea" : "ideas"} learned`
+                        : latest?.status === "planning"
+                          ? "Preparing…"
+                          : latest?.status === "error"
+                            ? "Couldn’t build"
+                            : latest
+                              ? "Not started"
+                              : "No ideas yet"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="note-row-delete"
+                    onClick={() => {
+                      setDeleteError("");
+                      setDeleteTarget(book);
+                    }}
+                    aria-label={`Delete ${book.title}`}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -149,6 +181,42 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
             setKeyOpen(false);
           }}
         />
+      )}
+
+      {deleteTarget && (
+        <Sheet
+          open
+          onClose={() => {
+            if (!deleting) setDeleteTarget(null);
+          }}
+          title="Delete this note?"
+          footer={
+            <div className="confirm-actions">
+              <button
+                type="button"
+                className="danger-button"
+                disabled={deleting}
+                onClick={() => void removeBook()}
+              >
+                {deleting ? "Deleting…" : "Delete note"}
+              </button>
+              <button
+                type="button"
+                className="text-button confirm-cancel"
+                disabled={deleting}
+                onClick={() => setDeleteTarget(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          }
+        >
+          <p className="confirm-copy">
+            “{deleteTarget.title}” and all its lessons, chats, and progress will
+            be removed from this device. This cannot be undone.
+          </p>
+          {deleteError && <p className="confirm-error">{deleteError}</p>}
+        </Sheet>
       )}
     </main>
   );

@@ -146,8 +146,8 @@ Tap any note on home. Its Progress page shows:
   want the page ranges.
 - Every lesson range, newest used first, with every concept listed and checked
   off as you learn it.
-- **Delete note** — the trash icon in the header removes the PDF, lessons, and
-  progress from this device.
+- **Delete note** — the trash icon on the home row or in the note header
+  removes the PDF, lessons, and progress from this device.
 
 The home note list is the overview, sorted by the note you opened last, with the
 latest page range under the title. Starting **New pages** creates another lesson
