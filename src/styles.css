@@ -875,6 +875,31 @@ img {
   width: 40px;
 }
 
+.note-title-button {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.note-title-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.note-title-button svg {
+  flex: none;
+  color: var(--muted);
+}
+
 .chat-scroll {
   flex: 1;
   min-height: 0;

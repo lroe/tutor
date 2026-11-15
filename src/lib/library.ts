@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { extractPdf } from "./pdf";
+import { extractPptx, PPTX_MIME } from "./pptx";
 import { DEFAULT_MODE } from "./modes";
 import type { Book, Chapter, Lesson } from "./types";
 import { uid } from "./util";
@@ -11,24 +12,33 @@ export async function addBook(
     signal?: AbortSignal;
   } = {},
 ): Promise<Book> {
-  if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
-    throw new Error("Cove needs a PDF textbook.");
+  const lower = file.name.toLowerCase();
+  const isPdf = file.type === "application/pdf" || lower.endsWith(".pdf");
+  const isPptx = file.type === PPTX_MIME || lower.endsWith(".pptx");
+  if (!isPdf && !isPptx) {
+    throw new Error("Cove needs a PDF or PowerPoint note.");
   }
   if (file.size === 0) {
     throw new Error("That file is empty.");
   }
 
   const id = uid();
-  const extracted = await extractPdf(id, file, {
-    signal: options.signal,
-    onProgress: options.onProgress,
-  });
+  const extracted = isPptx
+    ? await extractPptx(id, file, {
+        signal: options.signal,
+        onProgress: options.onProgress,
+      })
+    : await extractPdf(id, file, {
+        signal: options.signal,
+        onProgress: options.onProgress,
+      });
   const now = Date.now();
   const book: Book = {
     id,
     title: extracted.title,
     author: extracted.author,
     fileName: file.name,
+    format: isPptx ? "pptx" : "pdf",
     pageCount: extracted.pageCount,
     sizeBytes: file.size,
     cover: extracted.cover,
@@ -40,15 +50,25 @@ export async function addBook(
     extracted: true,
   };
 
-  await db.transaction("rw", [db.books, db.pages, db.files], async () => {
-    await db.books.put(book);
-    await db.pages.bulkPut(extracted.pages);
-    await db.files.put({
-      bookId: id,
-      blob: file,
-      mime: file.type || "application/pdf",
-    });
-  });
+  await db.transaction(
+    "rw",
+    [db.books, db.pages, db.files, db.pageImages, db.figures],
+    async () => {
+      await db.books.put(book);
+      await db.pages.bulkPut(extracted.pages);
+      if (extracted.pageImages?.length) {
+        await db.pageImages.bulkPut(extracted.pageImages);
+      }
+      if (extracted.figures?.length) {
+        await db.figures.bulkPut(extracted.figures);
+      }
+      await db.files.put({
+        bookId: id,
+        blob: file,
+        mime: file.type || (isPptx ? PPTX_MIME : "application/pdf"),
+      });
+    },
+  );
   return book;
 }
 
@@ -93,13 +113,18 @@ export async function openLesson(
   return lesson;
 }
 
-export function customChapter(startPage: number, endPage: number): Chapter {
+export function customChapter(
+  startPage: number,
+  endPage: number,
+  format: Book["format"] = "pdf",
+): Chapter {
+  const unit = format === "pptx" ? "Slide" : "Page";
   return {
     id: `custom:${startPage}-${endPage}`,
     title:
       startPage === endPage
-        ? `Page ${startPage}`
-        : `Pages ${startPage}–${endPage}`,
+        ? `${unit} ${startPage}`
+        : `${unit}s ${startPage}–${endPage}`,
     startPage,
     endPage,
   };

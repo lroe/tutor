@@ -28,6 +28,8 @@ export async function getPageImage(
   const id = `${bookId}:${pageNo}`;
   const cached = await db.pageImages.get(id);
   if (cached) return cached;
+  const book = await db.books.get(bookId);
+  if (book?.format === "pptx") return null;
 
   const inflight = pagePromises.get(id);
   if (inflight) return inflight;
@@ -68,6 +70,10 @@ export async function loadPageImages(
 ): Promise<PageImage[]> {
   const ids = pageNumbers.map((pageNo) => `${bookId}:${pageNo}`);
   const cached = await db.pageImages.bulkGet(ids);
+  const book = await db.books.get(bookId);
+  if (book?.format === "pptx") {
+    return cached.filter((image): image is PageImage => image !== undefined);
+  }
   const missing = pageNumbers.filter((_, index) => !cached[index]);
 
   if (missing.length) {

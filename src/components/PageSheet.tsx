@@ -18,14 +18,15 @@ export function PageSheet({
   const safeStart = clamp(Math.round(start) || 1, 1, book.pageCount);
   const safeEnd = clamp(Math.round(end) || 1, 1, book.pageCount);
   const valid = safeEnd >= safeStart;
+  const unit = book.format === "pptx" ? "slide" : "page";
 
   return (
     <Sheet
       open
       onClose={onClose}
-      title="Pages"
+      title={book.format === "pptx" ? "Slides" : "Pages"}
       subtitle={`${book.title} · ${book.pageCount} ${
-        book.pageCount === 1 ? "page" : "pages"
+        book.pageCount === 1 ? unit : `${unit}s`
       }`}
       footer={
         <button
@@ -65,7 +66,7 @@ export function PageSheet({
         </label>
       </div>
       {!valid && (
-        <p className="form-error">The last page needs to come after the first.</p>
+        <p className="form-error">{`The last ${unit} needs to come after the first.`}</p>
       )}
     </Sheet>
   );

@@ -2,8 +2,8 @@
 
 A very small, ChatGPT-style tutor for your notes.
 
-Upload a PDF, choose the pages, press **Build lesson**, and Cove teaches one idea
-at a time. It asks a quick question, answers your own questions, and places the
+Upload a PDF or PowerPoint, choose the pages or slides, press **Build lesson**,
+and Cove teaches one idea at a time. It asks a quick question, answers your own questions, and places the
 actual diagram from the page inline at the point where it belongs. The home
 screen lists each note and how many ideas you've learned. Tap a note to see its
 full concept list and start another page range.
@@ -80,23 +80,35 @@ npm run build     # static files in dist/
 npm run preview   # serve the build at localhost:4173
 ```
 
-Two sample notes are in `sample/`:
+Three sample notes are in `sample/`:
 
 | File | What it tests |
 | --- | --- |
 | `tooth-anatomy-sample.pdf` | Text + a diagram. Upload, pages, teaching, pictures. |
+| `tooth-anatomy-sample.pptx` | PowerPoint text + embedded image + image-only slide. |
 | `Scanned Page Sample.pdf` | Image-only page. Tests the automatic OCR. |
 
 ---
 
 ## The whole app
 
-1. **Upload a note** with the bar at the bottom.
-2. **Pick pages** — From / To — and tap **Build lesson**.
+1. **Upload a note** with the bar at the bottom. PDF and `.pptx` both work.
+2. **Pick pages or slides** — From / To — and tap **Build lesson**.
 3. Read the teaching. Type an answer or any question in the message box.
 4. Tap **Next** when you're ready for the next idea. On the last idea it says
    **Finish**.
 5. You land on the note's **Progress** page.
+
+### Titles
+
+Cove makes a title when you upload:
+
+- PDF: embedded title, then the first page heading, then the file name.
+- PowerPoint: the document title, then the first slide title, then the file
+  name.
+
+Tap the title on the note’s Progress page to rename it. The pencil is there so
+the title is not a hidden feature.
 
 ### Learning modes
 
@@ -162,9 +174,12 @@ Gemini. There is no model picker.
 
 ## Pictures from the note
 
-- Page snapshots are rendered locally with **PDF.js**.
-- The selected model's vision finds figures/diagrams/tables on the page and
-  returns boxes; Cove crops those regions locally and caches them.
+- PDF page snapshots are rendered locally with **PDF.js**.
+- PowerPoint text and embedded images are extracted locally from the `.pptx`
+  file. The largest embedded image on each slide becomes that slide’s visual.
+- For PDFs, the selected model's vision finds figures/diagrams/tables on the
+  page and returns boxes; Cove crops those regions locally and caches them.
+- PowerPoint slides do not need a vision call for their embedded images.
 - The teaching prompt places a figure token at the exact point where the visual
   belongs. Cove renders the cropped diagram inline there, between the paragraphs.
 - Cove shows only real cropped figures. It never substitutes a full page for a
@@ -174,9 +189,10 @@ Gemini. There is no model picker.
 - Page citations are kept out of the prose. They appear once in a small `p. 5`
   footer at the bottom of the message.
 - Tap the diagram to view it full screen.
-- Scanned/image-only pages are OCR'd automatically when you build a lesson.
-- Selected page text and page images go to the model. The PDF itself stays on
-  the device.
+- Scanned/image-only PDF pages and image-only PowerPoint slides are OCR'd
+  automatically when you build a lesson.
+- Selected text and page/slide images go to the model. The original file stays
+  on the device.
 
 DeepSeek V4.1 Flash accepts images. If its figure boxes are less accurate than
 Gemini's, switch providers for that note.
@@ -237,11 +253,11 @@ subscription is the bigger cost, and you already have it for coding.
 
 ## Data and limits
 
-- Book text, page snapshots, figures, chats, and progress live in the browser
-  (IndexedDB + localStorage).
+- Book text, page/slide snapshots, figures, chats, and progress live in the
+  browser (IndexedDB + localStorage).
 - No accounts, analytics, tracking, sync, or cloud backup.
 - iOS Safari storage is tied to the site. Adding to the Home Screen helps keep
-  it; clearing Safari data removes it. Keep the original PDFs in Files/Drive.
+  it; clearing Safari data removes it. Keep the original files in Files/Drive.
 - The model can be wrong. The page citations in each message are there so she
   can check the source PDF.
 - OCR and figure cropping can make mistakes. Tap a diagram to open it full
@@ -286,8 +302,8 @@ npm run build       # static PWA in dist/
 npm run preview     # serve the build
 ```
 
-Stack: React 19, TypeScript, Vite, Dexie, PDF.js, OpenCode Go (OpenAI-compatible),
-Gemini REST/SSE, `vite-plugin-pwa`, Cloudflare Workers.
+Stack: React 19, TypeScript, Vite, Dexie, PDF.js, JSZip, OpenCode Go
+(OpenAI-compatible), Gemini REST/SSE, `vite-plugin-pwa`, Cloudflare Workers.
 
 ```
 src/
@@ -298,6 +314,7 @@ src/
   lib/opencode.ts       OpenAI-compatible client through the Worker
   lib/gemini.ts         direct Gemini client
   lib/llm.ts            provider switch
+  lib/pptx.ts           PowerPoint text, slide images, and figures
   lib/                  PDFs, plans, checks, OCR, figure crops
 worker/
   index.js              Cloudflare Worker proxy

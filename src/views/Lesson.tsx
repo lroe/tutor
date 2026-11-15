@@ -38,6 +38,7 @@ import type {
   Evaluation,
   Mastery,
   Message,
+  BookFormat,
   LessonMode,
   PageText,
   Settings,
@@ -73,8 +74,12 @@ function extractSources(content: string): { text: string; sources: string[] } {
   return { text, sources };
 }
 
-function sourceLabel(source: string): string {
-  return `${/[,\u2013-]/.test(source) ? "pp." : "p."} ${source}`;
+function sourceLabel(source: string, format?: BookFormat): string {
+  const multiple = /[,\u2013-]/.test(source);
+  if (format === "pptx") {
+    return `${multiple ? "Slides" : "Slide"} ${source}`;
+  }
+  return `${multiple ? "pp." : "p."} ${source}`;
 }
 
 interface LiveState {
@@ -105,6 +110,23 @@ export function Lesson({
   const book = useLiveQuery(
     () => (lesson ? db.books.get(lesson.bookId) : undefined),
     [lesson?.bookId],
+  );
+  const pagesWithFigures = useLiveQuery(
+    async () => {
+      if (!lesson) return new Set<number>();
+      const rows = await db.figures
+        .where("[bookId+pageNo]")
+        .between(
+          [lesson.bookId, lesson.startPage],
+          [lesson.bookId, lesson.endPage],
+          true,
+          true,
+        )
+        .toArray();
+      return new Set(rows.map((row) => row.pageNo));
+    },
+    [lesson?.bookId, lesson?.startPage, lesson?.endPage],
+    new Set<number>(),
   );
 
   const [pages, setPages] = useState<PageText[] | null>(null);
@@ -141,6 +163,32 @@ export function Lesson({
   );
   const mode = lesson?.mode ?? DEFAULT_MODE;
   const style = useMemo(() => styleFor(messages), [messages]);
+  const fallbackFigures = useMemo(() => {
+    const map = new Map<number, number>();
+    if (book?.format !== "pptx" || !lesson) return map;
+    const seen = new Set<number>();
+    for (const message of messages) {
+      if (message.id === undefined) continue;
+      const token = message.content.match(FIGURE_TOKEN);
+      const tokenPage = token ? Number(token[1]) : undefined;
+      if (tokenPage !== undefined && pagesWithFigures.has(tokenPage)) {
+        seen.add(tokenPage);
+        continue;
+      }
+      if (message.kind !== "teach") continue;
+      const concept = lesson.plan[message.conceptIndex ?? -1];
+      if (!concept) continue;
+      const page = concept.pages.find(
+        (candidate) => pagesWithFigures.has(candidate) && !seen.has(candidate),
+      );
+      if (page !== undefined) {
+        map.set(message.id, page);
+        seen.add(page);
+      }
+    }
+    return map;
+  }, [book?.format, lesson, messages, pagesWithFigures]);
+
   const staticFigureAllowed = useMemo(() => {
     const seen = new Set<number>();
     const allowed = new Set<number>();
@@ -198,7 +246,7 @@ export function Lesson({
   }, [lesson?.bookId, lesson?.startPage, lesson?.endPage]);
 
   useEffect(() => {
-    if (!lesson || !pages) return;
+    if (!lesson || !pages || !book) return;
     if (lesson.plan.length > 0 || lesson.status !== "planning") return;
     if (planStartedRef.current === lesson.id) return;
 
@@ -206,11 +254,15 @@ export function Lesson({
       (page) => page.text.replace(/\s+/g, "").length < 40,
     ).length;
     const textChars = pages.reduce((sum, page) => sum + page.text.length, 0);
+    const needsPptxOcr =
+      book?.format === "pptx" &&
+      pages.some((page) => book.scannedPages.includes(page.pageNo));
     const needsOcr =
-      pages.length > 0 &&
-      (textChars < 200 || blankCount >= Math.ceil(pages.length * 0.6));
+      needsPptxOcr ||
+      (book?.format !== "pptx" &&
+        pages.length > 0 &&
+        (textChars < 200 || blankCount >= Math.ceil(pages.length * 0.6)));
 
-    if (needsOcr && !book) return;
     if (needsOcr && !isConfigured(settings)) {
       setPlanError(missingConfig(settings));
       void db.lessons.update(lesson.id, { status: "error" });
@@ -227,8 +279,14 @@ export function Lesson({
     (async () => {
       try {
         let workingPages = pages;
-        if (needsOcr && book) {
-          setOcrProgress({ done: 0, total: blankCount });
+        if (needsOcr) {
+          const ocrTotal =
+            book.format === "pptx"
+              ? pages.filter((page) =>
+                  book.scannedPages.includes(page.pageNo),
+                ).length
+              : blankCount;
+          setOcrProgress({ done: 0, total: ocrTotal });
           await readScannedPages({
             book,
             startPage: lesson.startPage,
@@ -724,6 +782,8 @@ export function Lesson({
                 (message.kind !== "teach" && message.kind !== "note") ||
                 staticFigureAllowed.has(message.id ?? -1)
               }
+              fallbackPage={fallbackFigures.get(message.id ?? -1)}
+              format={book?.format}
               bookId={lesson.bookId}
               settings={settings}
               onOpenImage={setImage}
@@ -876,6 +936,8 @@ function MessageRow({
   message,
   concept,
   allowFigure,
+  fallbackPage,
+  format,
   bookId,
   settings,
   onOpenImage,
@@ -883,6 +945,8 @@ function MessageRow({
   message: Message;
   concept?: Concept;
   allowFigure: boolean;
+  fallbackPage?: number;
+  format?: BookFormat;
   bookId: string;
   settings: Settings;
   onOpenImage: (src: string) => void;
@@ -906,15 +970,20 @@ function MessageRow({
   const showCheck = Boolean(check);
 
   const figureMatch = body.match(FIGURE_TOKEN);
-  const renderFigure = Boolean(figureMatch && concept && allowFigure);
-  if (figureMatch && !renderFigure) {
+  const useFallback = Boolean(fallbackPage && concept);
+  const renderFigure = Boolean(
+    figureMatch && concept && allowFigure && !useFallback,
+  );
+  if (figureMatch && (!renderFigure || useFallback)) {
     body = body.replace(FIGURE_TOKEN_ALL, "").trim();
   }
 
   const sourcesNode =
     extracted.sources.length > 0 ? (
       <p className="assistant-sources">
-        {extracted.sources.map(sourceLabel).join(" · ")}
+        {extracted.sources
+          .map((source) => sourceLabel(source, format))
+          .join(" · ")}
       </p>
     ) : null;
 
@@ -944,6 +1013,15 @@ function MessageRow({
   return (
     <div className="assistant">
       <Markdown>{body}</Markdown>
+      {useFallback && fallbackPage && concept && (
+        <InlineFigure
+          bookId={bookId}
+          pageNumbers={[fallbackPage]}
+          pageFilter={fallbackPage}
+          settings={settings}
+          onOpen={onOpenImage}
+        />
+      )}
       {showCheck && <p className="assistant-check">{check}</p>}
       {sourcesNode}
     </div>

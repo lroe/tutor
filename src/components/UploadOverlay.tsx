@@ -19,6 +19,7 @@ export function UploadOverlay({
   const [done, setDone] = useState(0);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState("");
+  const unit = file.name.toLowerCase().endsWith(".pptx") ? "slides" : "pages";
   const abortRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
   const startedRef = useRef(false);
@@ -89,7 +90,7 @@ export function UploadOverlay({
             <p className="upload-title">Reading note…</p>
             {total > 0 && (
               <p className="upload-sub">
-                {done} / {total} pages
+                {done} / {total} {unit}
               </p>
             )}
           </>

@@ -385,7 +385,7 @@ async function flattenOutline(
 function metadataTitle(
   info: Record<string, unknown> | undefined,
   fileName: string,
-): string {
+): { title: string; fromMetadata: boolean } {
   const candidate =
     typeof info?.Title === "string" ? info.Title.trim() : undefined;
   if (
@@ -395,9 +395,9 @@ function metadataTitle(
     !/^untitled$/i.test(candidate) &&
     !/microsoft word|powerpoint|adobe|indesign|quark/i.test(candidate)
   ) {
-    return cleanTitle(candidate);
+    return { title: cleanTitle(candidate), fromMetadata: true };
   }
-  return cleanTitle(fileName);
+  return { title: cleanTitle(fileName), fromMetadata: false };
 }
 
 function metadataAuthor(
@@ -505,8 +505,22 @@ export async function extractPdf(
       chapterSource = "ranges";
     }
 
+    const metaTitle = metadataTitle(info, file.name);
+    const firstHeading = headings
+      .filter((heading) => heading.page === 1)
+      .map((heading) => heading.title)
+      .find(
+        (title) =>
+          title.length >= 4 &&
+          !/^(chapter|part|unit|section|lecture|slide)\b/i.test(title),
+      );
+    const title =
+      !metaTitle.fromMetadata && firstHeading
+        ? cleanTitle(firstHeading)
+        : metaTitle.title;
+
     return {
-      title: metadataTitle(info, file.name),
+      title,
       author: metadataAuthor(info),
       pageCount,
       chapters,
@@ -514,6 +528,7 @@ export async function extractPdf(
       scannedPages: scanned,
       cover,
       pages,
+      format: "pdf",
     };
   });
 }

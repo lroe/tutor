@@ -5,11 +5,14 @@ export interface Chapter {
   endPage: number;
 }
 
+export type BookFormat = "pdf" | "pptx";
+
 export interface Book {
   id: string;
   title: string;
   author?: string;
   fileName: string;
+  format?: BookFormat;
   pageCount: number;
   sizeBytes: number;
   cover?: string;
@@ -32,7 +35,7 @@ export interface PageText {
   bookId: string;
   pageNo: number;
   text: string;
-  source: "pdf" | "ocr";
+  source: "pdf" | "pptx" | "ocr";
 }
 
 export type FigureKind = "figure" | "diagram" | "photo" | "table" | "chart";
@@ -179,6 +182,9 @@ export interface ExtractResult {
   scannedPages: number[];
   cover?: string;
   pages: PageText[];
+  format?: BookFormat;
+  pageImages?: PageImage[];
+  figures?: Figure[];
 }
 
 export interface ExtractHooks {

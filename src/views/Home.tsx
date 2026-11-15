@@ -39,11 +39,14 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
-    const isPdf =
-      file.type === "application/pdf" ||
-      file.name.toLowerCase().endsWith(".pdf");
-    if (!isPdf) {
-      setHomeError("Choose a PDF.");
+    const lower = file.name.toLowerCase();
+    const isPdf = file.type === "application/pdf" || lower.endsWith(".pdf");
+    const isPptx =
+      file.type ===
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+      lower.endsWith(".pptx");
+    if (!isPdf && !isPptx) {
+      setHomeError("Choose a PDF or PowerPoint.");
       return;
     }
     setHomeError("");
@@ -121,7 +124,7 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
       <input
         ref={fileRef}
         type="file"
-        accept="application/pdf,.pdf"
+        accept="application/pdf,.pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation,.pptx"
         className="visually-hidden"
         onChange={onFile}
       />

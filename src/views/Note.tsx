@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowLeft, Check, ChevronRight, Circle, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ChevronRight,
+  Circle,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { SettingsSheet } from "../components/SettingsSheet";
 import { PageSheet } from "../components/PageSheet";
 import { Sheet } from "../components/Sheet";
 import { Spinner } from "../components/Brand";
 import { db, deleteBookDeep } from "../lib/db";
-import { customChapter, openLesson } from "../lib/library";
+import { customChapter, openLesson, renameBook } from "../lib/library";
 import { isConfigured } from "../lib/provider";
 import type { Book, Lesson, Settings } from "../lib/types";
 import { useSettings } from "../state/settings";
@@ -33,6 +40,10 @@ export function Note({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
+  const [titleError, setTitleError] = useState("");
   const [pending, setPending] = useState<{
     book: Book;
     start: number;
@@ -41,7 +52,7 @@ export function Note({
 
   const startLesson = useCallback(
     async (target: Book, startPage: number, endPage: number) => {
-      const lesson = await openLesson(target, customChapter(startPage, endPage));
+      const lesson = await openLesson(target, customChapter(startPage, endPage, target.format));
       setPageOpen(false);
       navigate(`/lesson/${lesson.id}`);
     },
@@ -74,6 +85,21 @@ export function Note({
   const closeKey = () => {
     setKeyOpen(false);
     setPending(null);
+  };
+
+  const saveTitle = async () => {
+    const clean = titleDraft.replace(/\s+/g, " ").trim();
+    if (!clean) return;
+    setSavingTitle(true);
+    setTitleError("");
+    try {
+      await renameBook(id, clean);
+      setRenameOpen(false);
+    } catch {
+      setTitleError("Couldn't rename this note.");
+    } finally {
+      setSavingTitle(false);
+    }
   };
 
   const removeBook = async () => {
@@ -167,9 +193,19 @@ export function Note({
         >
           <ArrowLeft size={21} />
         </button>
-        <div className="chat-title" title={book.title}>
-          {book.title}
-        </div>
+        <button
+          type="button"
+          className="chat-title note-title-button"
+          title="Rename note"
+          onClick={() => {
+            setTitleDraft(book.title);
+            setTitleError("");
+            setRenameOpen(true);
+          }}
+        >
+          <span className="note-title-text">{book.title}</span>
+          <Pencil size={12} />
+        </button>
         <button
           type="button"
           className="icon-button note-delete"
@@ -324,6 +360,42 @@ export function Note({
           onClose={closeKey}
           onSave={saveSettings}
         />
+      )}
+
+      {renameOpen && (
+        <Sheet
+          open
+          onClose={() => {
+            if (!savingTitle) setRenameOpen(false);
+          }}
+          title="Rename note"
+          footer={
+            <button
+              type="button"
+              className="primary-button"
+              disabled={!titleDraft.trim() || savingTitle}
+              onClick={() => void saveTitle()}
+            >
+              {savingTitle ? "Saving…" : "Save"}
+            </button>
+          }
+        >
+          <label className="field">
+            <span>Title</span>
+            <input
+              value={titleDraft}
+              onChange={(event) => setTitleDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && titleDraft.trim()) {
+                  void saveTitle();
+                }
+              }}
+              maxLength={140}
+              autoFocus
+            />
+          </label>
+          {titleError && <p className="form-error">{titleError}</p>}
+        </Sheet>
       )}
 
       {deleteOpen && (
