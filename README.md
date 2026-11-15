@@ -3,9 +3,10 @@
 A very small, ChatGPT-style tutor for your notes.
 
 Upload a PDF, choose the pages, press **Build lesson**, and Cove teaches one idea
-at a time. It asks a quick question, answers your own questions, and shows the
-actual pictures from the pages. The home screen lists each note and how many
-ideas you've learned. Nothing else.
+at a time. It asks a quick question, answers your own questions, and places the
+actual diagram from the page inline at the point where it belongs. The home
+screen lists each note and how many ideas you've learned. Tap a note to see its
+full concept list and start another page range.
 
 No account. No onboarding questions. No settings screens full of options. No
 backend.
@@ -50,13 +51,24 @@ Two sample notes are in `sample/`:
 3. Read the teaching. Type an answer or any question in the message box.
 4. Tap **Next** when you're ready for the next idea. On the last idea it says
    **Finish**.
-5. Back on home, the note shows **"N ideas learned"**.
+5. You land on the note's **Progress** page.
+
+### Progress for each note
+
+Tap any note on home. Its Progress page shows:
+
+- **N ideas learned**.
+- **Continue lesson** if a lesson is in progress.
+- **New pages** — start a different page range for the same note.
+- Every lesson range, with every concept listed and checked off as you learn it.
+
+The home note list is the overview. The note page is the detailed progress.
+Starting **New pages** creates another lesson group on the same page, so a note
+can have several ranges over time.
 
 The tutor still asks a short check after each idea. You can answer it, ask
 something else, or skip it with **Next**. When you get something wrong, it gives
 a small correction and a follow-up question.
-
-There is no separate progress page. The note list is the progress.
 
 ### The only setting
 
@@ -79,9 +91,12 @@ Model: `gemini-3.8-flash` by default. No model picker.
 - Page snapshots are rendered locally with **PDF.js**.
 - Gemini vision finds figures/diagrams/tables on the page and returns boxes;
   Cove crops those regions locally and caches them.
-- They show up as small thumbnails under the current teaching message.
-  Tap one to view it full screen.
-- Page snapshots are always there as a fallback if a figure is missed.
+- The teaching prompt places a figure token at the exact point where the visual
+  belongs. Cove renders the cropped diagram inline there, between the paragraphs.
+- If a crop isn't ready, the page snapshot is shown as a fallback. If the model
+  doesn't place a token, a detected figure is shown between the explanation and
+  the check.
+- Tap the diagram to view it full screen.
 - Scanned/image-only pages are OCR'd automatically when you build a lesson.
 - Selected page text and page images go to Gemini. The PDF itself stays on the
   device.

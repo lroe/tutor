@@ -1,12 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Settings as SettingsIcon } from "lucide-react";
 import { Wordmark } from "../components/Brand";
 import { KeySheet } from "../components/KeySheet";
-import { PageSheet } from "../components/PageSheet";
 import { UploadOverlay } from "../components/UploadOverlay";
 import { db } from "../lib/db";
-import { customChapter, openLesson } from "../lib/library";
 import type { Book, Lesson } from "../lib/types";
 import { useSettings } from "../state/settings";
 
@@ -24,13 +22,7 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
   );
 
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [pageBook, setPageBook] = useState<Book | null>(null);
   const [keyOpen, setKeyOpen] = useState(false);
-  const [pending, setPending] = useState<{
-    book: Book;
-    start: number;
-    end: number;
-  } | null>(null);
   const [homeError, setHomeError] = useState("");
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -42,43 +34,6 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
           sum + lesson.plan.filter((concept) => concept.covered).length,
         0,
       );
-
-  const activeLessonFor = (bookId: string) =>
-    lessons
-      .filter(
-        (lesson) =>
-          lesson.bookId === bookId &&
-          (lesson.status === "active" ||
-          lesson.status === "planning" ||
-          lesson.status === "error"),
-      )
-      .sort((a, b) => b.updatedAt - a.updatedAt)[0];
-
-  const startLesson = useCallback(
-    async (book: Book, startPage: number, endPage: number) => {
-      const lesson = await openLesson(book, customChapter(startPage, endPage));
-      setPageBook(null);
-      navigate(`/lesson/${lesson.id}`);
-    },
-    [navigate],
-  );
-
-  useEffect(() => {
-    if (!pending || !settings.apiKey.trim()) return;
-    const queued = pending;
-    setPending(null);
-    void startLesson(queued.book, queued.start, queued.end);
-  }, [pending, settings.apiKey, startLesson]);
-
-  const openNote = (book: Book) => {
-    setHomeError("");
-    const active = activeLessonFor(book.id);
-    if (active) {
-      navigate(`/lesson/${active.id}`);
-      return;
-    }
-    setPageBook(book);
-  };
 
   const onFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -93,27 +48,6 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
     }
     setHomeError("");
     setUploadFile(file);
-  };
-
-  const build = (startPage: number, endPage: number) => {
-    if (!pageBook) return;
-    if (!settings.apiKey.trim()) {
-      setPending({ book: pageBook, start: startPage, end: endPage });
-      setPageBook(null);
-      setKeyOpen(true);
-      return;
-    }
-    void startLesson(pageBook, startPage, endPage);
-  };
-
-  const saveKey = (key: string) => {
-    update({ apiKey: key });
-    setKeyOpen(false);
-  };
-
-  const closeKey = () => {
-    setKeyOpen(false);
-    setPending(null);
   };
 
   return (
@@ -142,7 +76,10 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
                   key={book.id}
                   type="button"
                   className="note-row"
-                  onClick={() => openNote(book)}
+                  onClick={() => {
+                    setHomeError("");
+                    navigate(`/note/${book.id}`);
+                  }}
                 >
                   <span className="note-title">{book.title}</span>
                   <span className="note-count">
@@ -182,24 +119,19 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
           onClose={() => setUploadFile(null)}
           onDone={(book) => {
             setUploadFile(null);
-            setPageBook(book);
+            navigate(`/note/${book.id}?pages=1`);
           }}
-        />
-      )}
-
-      {pageBook && (
-        <PageSheet
-          book={pageBook}
-          onClose={() => setPageBook(null)}
-          onBuild={build}
         />
       )}
 
       {keyOpen && (
         <KeySheet
           hasKey={Boolean(settings.apiKey)}
-          onClose={closeKey}
-          onSave={saveKey}
+          onClose={() => setKeyOpen(false)}
+          onSave={(key) => {
+            update({ apiKey: key });
+            setKeyOpen(false);
+          }}
         />
       )}
     </main>

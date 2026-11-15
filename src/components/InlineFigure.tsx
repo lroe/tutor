@@ -2,14 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import { ensureFigures, figuresForPages, loadPageImages, visualPages } from "../lib/visuals";
 import type { Figure, PageImage, Settings } from "../lib/types";
 
-export function VisualStrip({
+export function InlineFigure({
   bookId,
   pageNumbers,
+  pageFilter,
+  pageFallback = true,
   settings,
   onOpen,
 }: {
   bookId: string;
   pageNumbers: number[];
+  pageFilter?: number;
+  pageFallback?: boolean;
   settings: Settings;
   onOpen: (src: string) => void;
 }) {
@@ -57,7 +61,7 @@ export function VisualStrip({
             );
           }
         } catch {
-          // Page pictures still work without the extra figure crops.
+          // The page snapshot is still available.
         }
       }
     })();
@@ -68,40 +72,33 @@ export function VisualStrip({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookId, pageKey, settings.apiKey, settings.model]);
 
-  if (!loading && images.length === 0 && figures.length === 0) return null;
+  if (loading && images.length === 0 && figures.length === 0) {
+    return pageFallback ? (
+      <span className="inline-figure-skeleton" aria-hidden="true" />
+    ) : null;
+  }
 
-  const items = [
-    ...figures.map((figure) => ({
-      id: figure.id,
-      src: figure.dataUrl,
-      pageNo: figure.pageNo,
-    })),
-    ...images.map((image) => ({
-      id: image.id,
-      src: image.dataUrl,
-      pageNo: image.pageNo,
-    })),
-  ].slice(0, 6);
+  const filteredFigures = pageFilter
+    ? figures.filter((figure) => figure.pageNo === pageFilter)
+    : figures;
+  const filteredImages = pageFilter
+    ? images.filter((image) => image.pageNo === pageFilter)
+    : images;
+
+  const figure = filteredFigures[0] ?? figures[0];
+  const image = filteredImages[0] ?? images[0];
+  if (!figure && !pageFallback) return null;
+  const src = figure?.dataUrl ?? image?.dataUrl;
+  if (!src) return null;
 
   return (
-    <div className="message-images">
-      {loading && items.length === 0 && (
-        <>
-          <span className="thumb-skeleton" />
-          <span className="thumb-skeleton is-wide" />
-        </>
-      )}
-      {items.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          className="thumb"
-          onClick={() => onOpen(item.src)}
-          aria-label={`Open picture from page ${item.pageNo}`}
-        >
-          <img src={item.src} alt="" loading="lazy" />
-        </button>
-      ))}
-    </div>
+    <button
+      type="button"
+      className="inline-figure"
+      onClick={() => onOpen(src)}
+      aria-label="Open the figure from the note"
+    >
+      <img src={src} alt="" loading="lazy" />
+    </button>
   );
 }

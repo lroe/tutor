@@ -10,7 +10,7 @@ import { ArrowLeft, ArrowUp, ChevronRight } from "lucide-react";
 import { Markdown } from "../components/Markdown";
 import { Spinner, TypingDots } from "../components/Brand";
 import { ImageViewer } from "../components/ImageViewer";
-import { VisualStrip } from "../components/VisualStrip";
+import { InlineFigure } from "../components/InlineFigure";
 import { db, pagesFor } from "../lib/db";
 import {
   answerQuestion,
@@ -526,7 +526,7 @@ export function Lesson({
         updatedAt: Date.now(),
       });
       if (done) {
-        navigate("/");
+        navigate(`/note/${lesson.bookId}`);
         return;
       }
       teachStartedRef.current = `${lesson.id}:${nextIndex}`;
@@ -550,6 +550,10 @@ export function Lesson({
   }, [composer]);
 
   const title = book?.title ?? lesson?.bookTitle ?? "";
+  const back = () => {
+    if (lesson) navigate(`/note/${lesson.bookId}`);
+    else navigate("/");
+  };
 
   if (lesson === undefined) {
     return (
@@ -583,7 +587,7 @@ export function Lesson({
   if (planError && lesson.plan.length === 0) {
     return (
       <div className="lesson">
-        <ChatBar title={title} onBack={() => navigate("/")} />
+        <ChatBar title={title} onBack={back} />
         <div className="state-center">
           <p>{planError}</p>
           <button type="button" className="text-button" onClick={retryPlan}>
@@ -597,7 +601,7 @@ export function Lesson({
   if (lesson.plan.length === 0 || pages === null) {
     return (
       <div className="lesson">
-        <ChatBar title={title} onBack={() => navigate("/")} />
+        <ChatBar title={title} onBack={back} />
         <div className="state-center">
           <Spinner size={22} />
           <p>
@@ -618,7 +622,7 @@ export function Lesson({
 
   return (
     <div className="lesson">
-      <ChatBar title={title} onBack={() => navigate("/")} />
+      <ChatBar title={title} onBack={back} />
 
       <div className="chat-scroll" ref={containerRef} onScroll={onScroll}>
         <div className="chat-inner">
@@ -779,22 +783,62 @@ function MessageRow({
     );
   }
 
-  const showCheck =
-    Boolean(message.checkQuestion) &&
-    !message.content.includes(message.checkQuestion ?? "");
+  const check = message.checkQuestion;
+  const showCheck = Boolean(check) && !message.content.includes(check ?? "");
+  const figureMatch = message.content.match(/\[\[figure(?::(\d+))?\]\]/i);
+
+  if (figureMatch?.index !== undefined && concept) {
+    const before = message.content.slice(0, figureMatch.index);
+    const after = message.content
+      .slice(figureMatch.index + figureMatch[0].length)
+      .replace(/\[\[figure(?::\d+)?\]\]/gi, "");
+    const pageFilter = figureMatch[1] ? Number(figureMatch[1]) : undefined;
+    return (
+      <div className="assistant">
+        <Markdown>{before}</Markdown>
+        <InlineFigure
+          bookId={bookId}
+          pageNumbers={concept.pages}
+          pageFilter={pageFilter}
+          settings={settings}
+          onOpen={onOpenImage}
+        />
+        <Markdown>{after}</Markdown>
+        {showCheck && <p className="assistant-check">{check}</p>}
+      </div>
+    );
+  }
+
+  if (isActiveTeach && concept) {
+    let explanation = message.content;
+    let tail = "";
+    if (check) {
+      const index = message.content.lastIndexOf(check);
+      if (index >= 0) {
+        explanation = message.content.slice(0, index);
+        tail = message.content.slice(index);
+      }
+    }
+    return (
+      <div className="assistant">
+        <Markdown>{explanation}</Markdown>
+        <InlineFigure
+          bookId={bookId}
+          pageNumbers={concept.pages}
+          pageFallback={false}
+          settings={settings}
+          onOpen={onOpenImage}
+        />
+        {tail && <Markdown>{tail}</Markdown>}
+        {showCheck && <p className="assistant-check">{check}</p>}
+      </div>
+    );
+  }
 
   return (
     <div className="assistant">
       <Markdown>{message.content}</Markdown>
-      {showCheck && <p className="assistant-check">{message.checkQuestion}</p>}
-      {isActiveTeach && concept && (
-        <VisualStrip
-          bookId={bookId}
-          pageNumbers={concept.pages}
-          settings={settings}
-          onOpen={onOpenImage}
-        />
-      )}
+      {showCheck && <p className="assistant-check">{check}</p>}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { SettingsProvider } from "./state/settings";
 import { useHashRoute } from "./hooks/useHashRoute";
 import { Home } from "./views/Home";
 import { Lesson } from "./views/Lesson";
+import { Note } from "./views/Note";
 
 function AppFrame() {
   const { route, navigate } = useHashRoute();
@@ -30,6 +31,13 @@ function AppFrame() {
       <div className="app-frame">
         {route.name === "lesson" ? (
           <Lesson key={route.id} id={route.id} navigate={navigate} />
+        ) : route.name === "note" ? (
+          <Note
+            key={route.id}
+            id={route.id}
+            autoPages={route.autoPages}
+            navigate={navigate}
+          />
         ) : (
           <Home navigate={navigate} />
         )}

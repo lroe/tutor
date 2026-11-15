@@ -123,16 +123,26 @@ export function parseTeach(
   return { explanation, check };
 }
 
+function stripFigureTokens(text: string): string {
+  return text
+    .replace(/\[\[figure(?::\d+)?\]\]/gi, "")
+    .replace(/\[\[(?:f(?:i(?:g(?:u(?:r(?:e)?)?)?)?)?)?(?::\d*)?\]?$/i, "");
+}
+
 export function visibleTeach(raw: string): string {
   const full = raw.search(/---\s*CHECK/i);
-  if (full >= 0) return raw.slice(0, full).trimEnd();
+  if (full >= 0) return stripFigureTokens(raw.slice(0, full)).trimEnd();
   const labelled = raw.search(
     /\n\s*(?:quick check|check yourself|a small check)\s*[:\-—]/i,
   );
-  if (labelled >= 0) return raw.slice(0, labelled).trimEnd();
+  if (labelled >= 0) {
+    return stripFigureTokens(raw.slice(0, labelled)).trimEnd();
+  }
   const partial = raw.match(/\n-{1,3}\s*C(?:H(?:E(?:C(?:K)?)?)?)?\s*$/i);
-  if (partial?.index != null) return raw.slice(0, partial.index).trimEnd();
-  return raw;
+  if (partial?.index != null) {
+    return stripFigureTokens(raw.slice(0, partial.index)).trimEnd();
+  }
+  return stripFigureTokens(raw);
 }
 
 function planPrompt(args: {
@@ -399,6 +409,8 @@ ${
       ? "This is an application idea: make the clinical link concrete, and name what she would notice first."
       : "This is a concept idea: prioritise the why and how, not a list of features."
 }
+
+If a figure, diagram, or table in the chapter genuinely supports this idea, insert the exact token [[figure:PAGE]] on a line by itself at the precise point where the figure belongs, using the figure's page number. Use it at most once, only if the chapter actually has that visual, and do not describe the token.
 
 After the explanation, output a line containing exactly ---CHECK--- and then one short question. ${checkStyleFor(concept.kind)} Ask exactly one question and do not give the answer.`;
   return streamText(
