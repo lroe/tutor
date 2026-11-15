@@ -90,6 +90,36 @@ site, and run `npx wrangler@latest deploy` again. Or set it in the dashboard.
 
 ---
 
+## Separate iPhone/PWA Worker
+
+The iPhone/PWA build can use its own Worker on a second Cloudflare account so
+its free daily request budget is independent from the Android app. Both Workers
+can use the same OpenCode Go key; the Cloudflare budgets are separate, but the
+Go allowance is still one subscription.
+
+When signed in to the second account:
+
+```bash
+cd worker
+npx wrangler@latest deploy --config wrangler.iphone.toml
+npx wrangler@latest secret put OPENCODE_API_KEY --config wrangler.iphone.toml
+```
+
+`wrangler.iphone.toml` names the Worker `cove-proxy-iphone`. After the Pages
+project exists, set `ALLOWED_ORIGIN` in that file to the Pages origin, then
+redeploy:
+
+```toml
+[vars]
+ALLOWED_MODELS = "deepseek-v4.1-flash"
+ALLOWED_ORIGIN = "https://cove-iphone.pages.dev,http://localhost:4173"
+```
+
+Build the PWA with the new Worker URL in `.env.local`, then deploy `dist/` to
+Pages from the same account.
+
+---
+
 ## Pre-fill the Worker URL in Cove
 
 At runtime: paste it in Settings.

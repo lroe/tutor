@@ -1,0 +1,11 @@
+name = "cove-proxy-iphone"
+main = "index.js"
+compatibility_date = "2026-11-15"
+
+# iPhone/PWA Worker, kept on a separate Cloudflare account so its free daily
+# request budget is independent from the Android Worker.
+[vars]
+ALLOWED_MODELS = "deepseek-v4.1-flash"
+
+# Set this after the Pages project exists, then redeploy:
+# ALLOWED_ORIGIN = "https://cove-iphone.pages.dev,http://localhost:4173"
