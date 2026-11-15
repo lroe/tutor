@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowLeft, Check, ChevronRight, Circle } from "lucide-react";
-import { KeySheet } from "../components/KeySheet";
+import { SettingsSheet } from "../components/SettingsSheet";
 import { PageSheet } from "../components/PageSheet";
 import { Spinner } from "../components/Brand";
 import { db } from "../lib/db";
 import { customChapter, openLesson } from "../lib/library";
-import type { Book, Lesson } from "../lib/types";
+import { isConfigured } from "../lib/provider";
+import type { Book, Lesson, Settings } from "../lib/types";
 import { useSettings } from "../state/settings";
 
 export function Note({
@@ -43,15 +44,15 @@ export function Note({
   );
 
   useEffect(() => {
-    if (!pending || !settings.apiKey.trim()) return;
+    if (!pending || !isConfigured(settings)) return;
     const queued = pending;
     setPending(null);
     void startLesson(queued.book, queued.start, queued.end);
-  }, [pending, settings.apiKey, startLesson]);
+  }, [pending, settings, startLesson]);
 
   const build = (startPage: number, endPage: number) => {
     if (!book) return;
-    if (!settings.apiKey.trim()) {
+    if (!isConfigured(settings)) {
       setPageOpen(false);
       setPending({ book, start: startPage, end: endPage });
       setKeyOpen(true);
@@ -60,8 +61,8 @@ export function Note({
     void startLesson(book, startPage, endPage);
   };
 
-  const saveKey = (key: string) => {
-    update({ apiKey: key });
+  const saveSettings = (patch: Partial<Settings>) => {
+    update(patch);
     setKeyOpen(false);
   };
 
@@ -280,10 +281,10 @@ export function Note({
       )}
 
       {keyOpen && (
-        <KeySheet
-          hasKey={Boolean(settings.apiKey)}
+        <SettingsSheet
+          settings={settings}
           onClose={closeKey}
-          onSave={saveKey}
+          onSave={saveSettings}
         />
       )}
     </div>

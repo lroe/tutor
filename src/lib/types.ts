@@ -132,9 +132,12 @@ export interface Activity {
   checks: number;
 }
 
+export type AIProvider = "opencode" | "gemini";
+
 export interface Settings {
-  apiKey: string;
-  model: string;
+  provider: AIProvider;
+  proxyUrl: string;
+  geminiKey: string;
 }
 
 export interface PlanItem {

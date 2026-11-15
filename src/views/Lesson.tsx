@@ -22,6 +22,7 @@ import {
   visibleTeach,
 } from "../lib/ai";
 import { describeAIError } from "../lib/gemini";
+import { isConfigured, missingConfig } from "../lib/provider";
 import { readScannedPages } from "../lib/ocr";
 import type {
   Concept,
@@ -29,6 +30,7 @@ import type {
   Mastery,
   Message,
   PageText,
+  Settings,
   Verdict,
 } from "../lib/types";
 import { isAbort, uid } from "../lib/util";
@@ -156,8 +158,8 @@ export function Lesson({
       (textChars < 200 || blankCount >= Math.ceil(pages.length * 0.6));
 
     if (needsOcr && !book) return;
-    if (needsOcr && !settings.apiKey.trim()) {
-      setPlanError("Add your Gemini API key in Settings first.");
+    if (needsOcr && !isConfigured(settings)) {
+      setPlanError(missingConfig(settings));
       void db.lessons.update(lesson.id, { status: "error" });
       return;
     }
@@ -394,9 +396,9 @@ export function Lesson({
     if (!lesson || !pages || busy) return;
     const text = (override ?? composer).trim();
     if (!text) return;
-    if (!settings.apiKey.trim()) {
+    if (!isConfigured(settings)) {
       setSendError({
-        message: "Add your Gemini API key in Settings first.",
+        message: missingConfig(settings),
         text,
       });
       return;
@@ -772,7 +774,7 @@ function MessageRow({
   concept?: Concept;
   isActiveTeach: boolean;
   bookId: string;
-  settings: { apiKey: string; model: string };
+  settings: Settings;
   onOpenImage: (src: string) => void;
 }) {
   if (message.role === "user") {
@@ -785,13 +787,15 @@ function MessageRow({
 
   const check = message.checkQuestion;
   const showCheck = Boolean(check) && !message.content.includes(check ?? "");
-  const figureMatch = message.content.match(/\[\[figure(?::(\d+))?\]\]/i);
+  const figureMatch = message.content.match(
+    /\[\[\s*figure\s*:?\s*(?:p\.?\s*)?(\d+)\s*\]\]/i,
+  );
 
   if (figureMatch?.index !== undefined && concept) {
     const before = message.content.slice(0, figureMatch.index);
     const after = message.content
       .slice(figureMatch.index + figureMatch[0].length)
-      .replace(/\[\[figure(?::\d+)?\]\]/gi, "");
+      .replace(/\[\[\s*figure\s*:?\s*(?:p\.?\s*)?\d*\s*\]\]/gi, "");
     const pageFilter = figureMatch[1] ? Number(figureMatch[1]) : undefined;
     return (
       <div className="assistant">

@@ -3,6 +3,7 @@ import { db, pagesFor } from "./db";
 import { renderPageImage, withPdf } from "./pdf";
 import type { Book, Settings } from "./types";
 import { AIError } from "./gemini";
+import { isConfigured, missingConfig } from "./provider";
 
 const MAX_PAGES_PER_PASS = 60;
 
@@ -21,8 +22,8 @@ export async function readScannedPages(args: {
   signal?: AbortSignal;
 }): Promise<number> {
   const { book, startPage, endPage, settings, onProgress, signal } = args;
-  if (!settings.apiKey.trim()) {
-    throw new AIError("Add your Gemini API key in Settings first.");
+  if (!isConfigured(settings)) {
+    throw new AIError(missingConfig(settings));
   }
   const pages = await pagesFor(book.id, startPage, endPage);
   const blank = pages

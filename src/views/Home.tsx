@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Settings as SettingsIcon } from "lucide-react";
 import { Wordmark } from "../components/Brand";
-import { KeySheet } from "../components/KeySheet";
+import { SettingsSheet } from "../components/SettingsSheet";
 import { UploadOverlay } from "../components/UploadOverlay";
 import { db } from "../lib/db";
 import type { Book, Lesson } from "../lib/types";
@@ -125,11 +125,11 @@ export function Home({ navigate }: { navigate: (path: string) => void }) {
       )}
 
       {keyOpen && (
-        <KeySheet
-          hasKey={Boolean(settings.apiKey)}
+        <SettingsSheet
+          settings={settings}
           onClose={() => setKeyOpen(false)}
-          onSave={(key) => {
-            update({ apiKey: key });
+          onSave={(patch) => {
+            update(patch);
             setKeyOpen(false);
           }}
         />

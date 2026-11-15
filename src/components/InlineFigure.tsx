@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ensureFigures, figuresForPages, loadPageImages, visualPages } from "../lib/visuals";
+import { isConfigured } from "../lib/provider";
 import type { Figure, PageImage, Settings } from "../lib/types";
 
 export function InlineFigure({
@@ -42,7 +43,7 @@ export function InlineFigure({
       setFigures(cached);
       setLoading(false);
 
-      if (!loaded.length || !settings.apiKey.trim()) return;
+      if (!loaded.length || !isConfigured(settings)) return;
       const found = [...cached];
       for (const image of loaded) {
         if (cancelled) break;
@@ -70,7 +71,7 @@ export function InlineFigure({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookId, pageKey, settings.apiKey, settings.model]);
+  }, [bookId, pageKey, settings]);
 
   if (loading && images.length === 0 && figures.length === 0) {
     return pageFallback ? (

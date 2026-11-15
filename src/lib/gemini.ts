@@ -1,10 +1,12 @@
 export class AIError extends Error {
   status?: number;
+  detail?: string;
 
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, detail?: string) {
     super(message);
     this.name = "AIError";
     this.status = status;
+    this.detail = detail;
   }
 }
 
