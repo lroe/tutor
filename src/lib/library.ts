@@ -23,6 +23,7 @@ export async function addBook(
   }
 
   const id = uid();
+  const bytes = await file.arrayBuffer();
   const extracted = isPptx
     ? await extractPptx(id, file, {
         signal: options.signal,
@@ -64,7 +65,7 @@ export async function addBook(
       }
       await db.files.put({
         bookId: id,
-        blob: file,
+        bytes,
         mime: file.type || (isPptx ? PPTX_MIME : "application/pdf"),
       });
     },

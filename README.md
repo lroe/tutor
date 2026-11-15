@@ -100,6 +100,13 @@ Three sample notes are in `sample/`:
    idea it says **Finish**.
 5. You land on the note's **Progress** page.
 
+### Reviewing finished lessons
+
+Finished lessons stay in the note's Progress list. Tap one to reopen its full
+history: every previous message, diagram, and check is there. The composer is
+available, so you can ask follow-up questions about the finished lesson. There
+is no **Next** button and no new grading in review mode.
+
 ### Titles
 
 Cove makes a title when you upload:
@@ -164,8 +171,10 @@ There is one Settings sheet, opened from the gear on home or when you build a
 lesson without a provider:
 
 - **Provider:** OpenCode Go (default) or Gemini.
-- **Worker URL** for OpenCode Go. Paste the `*.workers.dev` URL from the Worker
-  deployment. **Test connection** checks `/health`.
+- **Cloudflare Worker URL** for OpenCode Go. The deployed build pre-fills the
+  current Worker; paste a different `*.workers.dev` URL to override it.
+  **Test connection** checks `/health`. **Use default** restores the baked-in
+  URL.
 - **Gemini API key** only if you switch to Gemini. It is stored on that device.
 
 Models are fixed: `deepseek-v4.1-flash` for OpenCode Go, `gemini-3.8-flash` for
@@ -203,37 +212,54 @@ Gemini's, switch providers for that note.
 ## Put it on her iPhone
 
 Cove is a **PWA**. This is the free path — no Apple developer account, no
-TestFlight, no App Store, no Mac.
+TestFlight, no App Store, no Mac. It runs in Safari and installs to the Home
+Screen as a standalone app with its own icon and dark launch screen.
 
 1. Deploy the Worker (above).
-2. Build:
+2. Build with the Worker URL baked in:
 
    ```bash
    VITE_COVE_PROXY_URL=https://cove-proxy.you.workers.dev npm run build
    ```
 
    Or build without it and paste the Worker URL in Cove's Settings later.
-
-3. Upload the `dist/` folder to a static host with HTTPS:
-   - **Netlify Drop** — https://app.netlify.com/drop (drag `dist/`)
-   - **Cloudflare Pages** — direct upload
-   - **GitHub Pages** — easiest as a root site
-   - **Vercel** — static project
-4. On her iPhone: open the HTTPS link in **Safari** → **Share → Add to Home
+3. Upload `dist/` to Cloudflare Pages (see below).
+4. On the iPhone: open the HTTPS link in **Safari** → **Share → Add to Home
    Screen → Add**.
 5. Open Cove from its icon. If the Worker URL wasn't baked in, paste it from the
-   gear.
+   gear. **Use default** restores it if you change it later.
+
+### Cloudflare Pages
+
+The app is a static `dist/` folder, so direct upload works without a build
+pipeline:
+
+```bash
+npm run build
+npx wrangler pages deploy dist --project-name cove
+```
+
+The first deploy asks you to log in and creates the project. Later deploys use
+the same command. The site is served from `https://<project>.pages.dev`.
+
+`public/_headers` keeps `index.html`, `sw.js`, and the manifest out of the
+cache so an installed app picks up new builds. Hashed files under `/assets/`
+are cached for a year.
+
+Use a **root URL**. The manifest, service worker, and splash images are
+configured for `/`. A GitHub Pages project subfolder would need a Vite `base`
+and manifest path change.
 
 The static host only serves files. The Worker only proxies model calls. There is
 no database. The app shell is cached, so stored notes open offline; the model
 needs the network.
 
-Use a **root URL** (e.g. `cove.netlify.app`). The manifest and service worker are
-configured for `/`. A GitHub Pages project subfolder would need a Vite `base`
-and manifest path change.
-
 For a quick look while testing, `npm run dev` prints a LAN URL. iPhone only allows
 Add to Home Screen on HTTPS (or localhost), so the hosted link is the real path.
+
+The iPhone build includes `apple-touch-startup-image` splash screens for current
+iPhones, from the 320×568 SE up to the 440×956 Pro Max. Safe-area insets and the
+visual viewport are handled so the composer stays above the keyboard.
 
 ---
 
@@ -259,6 +285,9 @@ subscription is the bigger cost, and you already have it for coding.
 - No accounts, analytics, tracking, sync, or cloud backup.
 - iOS Safari storage is tied to the site. Adding to the Home Screen helps keep
   it; clearing Safari data removes it. Keep the original files in Files/Drive.
+- Safari can reject Blob writes to IndexedDB, especially in private browsing.
+  Cove stores the original PDF/PPTX as bytes instead, so uploads work in a
+  normal or private Safari window.
 - The model can be wrong. The page citations in each message are there so she
   can check the source PDF.
 - OCR and figure cropping can make mistakes. Tap a diagram to open it full

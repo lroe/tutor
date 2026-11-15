@@ -1,5 +1,5 @@
 import { readPageImage } from "./ai";
-import { db, pagesFor } from "./db";
+import { db, pagesFor, storedFileBlob } from "./db";
 import { renderPageImage, withPdf } from "./pdf";
 import type { Book, Settings } from "./types";
 import { AIError } from "./gemini";
@@ -84,7 +84,7 @@ export async function readScannedPages(args: {
   }
 
   let done = 0;
-  await withPdf(stored.blob, async (document) => {
+  await withPdf(storedFileBlob(stored), async (document) => {
     for (const pageNo of blank) {
       if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
       const dataUrl = await renderPageImage(document, pageNo, {

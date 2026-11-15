@@ -46,6 +46,16 @@ class CoveDatabase extends Dexie {
 
 export const db = new CoveDatabase();
 
+export function storedFileBlob(stored: StoredFile): Blob {
+  if (stored.bytes) {
+    return new Blob([stored.bytes], { type: stored.mime });
+  }
+  if (stored.blob) {
+    return stored.blob;
+  }
+  throw new Error("The original file is missing from this device.");
+}
+
 export async function pagesFor(
   bookId: string,
   startPage: number,

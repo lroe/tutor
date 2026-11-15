@@ -1,5 +1,5 @@
 import { findFigures } from "./ai";
-import { db } from "./db";
+import { db, storedFileBlob } from "./db";
 import { renderPageImage, withPdf } from "./pdf";
 import type { Figure, PageImage, Settings } from "./types";
 import { isConfigured } from "./provider";
@@ -38,7 +38,7 @@ export async function getPageImage(
     const file = await db.files.get(bookId);
     if (!file) return null;
     try {
-      const dataUrl = await withPdf(file.blob, (document) =>
+      const dataUrl = await withPdf(storedFileBlob(file), (document) =>
         renderPageImage(document, pageNo, {
           maxWidth: 1100,
           maxHeight: 1500,
@@ -79,7 +79,7 @@ export async function loadPageImages(
   if (missing.length) {
     const file = await db.files.get(bookId);
     if (file) {
-      const rendered = await withPdf(file.blob, async (document) => {
+      const rendered = await withPdf(storedFileBlob(file), async (document) => {
         const records: PageImage[] = [];
         for (const pageNo of missing) {
           try {

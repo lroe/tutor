@@ -26,7 +26,13 @@ export interface Book {
 
 export interface StoredFile {
   bookId: string;
-  blob: Blob;
+  /**
+   * Safari (especially private browsing) can abort IndexedDB writes that
+   * contain a Blob or File. New records store the original bytes instead;
+   * `blob` is kept so notes saved by older builds still open.
+   */
+  bytes?: ArrayBuffer;
+  blob?: Blob;
   mime: string;
 }
 
